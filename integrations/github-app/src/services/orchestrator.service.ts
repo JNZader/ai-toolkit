@@ -8,6 +8,26 @@ import * as path from 'path';
 import { simpleGit } from 'simple-git';
 import { auditService } from './audit.service.js';
 
+/**
+ * SEC-004: Sanitizes path components to prevent path traversal attacks.
+ * Replaces any character that is not alphanumeric, hyphen, or underscore.
+ */
+function sanitizePath(input: string): string {
+  return input.replace(/[^a-zA-Z0-9\-_]/g, '_');
+}
+
+/**
+ * SEC-004: Validates that a resolved path stays within the base directory.
+ * Throws an error if path traversal is detected.
+ */
+function validatePathWithinBase(resolvedPath: string, baseDir: string): void {
+  const normalizedResolved = path.resolve(resolvedPath);
+  const normalizedBase = path.resolve(baseDir);
+  if (!normalizedResolved.startsWith(normalizedBase)) {
+    throw new Error('Path traversal attempt detected');
+  }
+}
+
 export interface ReviewRecord {
   timestamp: string;
   repo: string;
