@@ -19,18 +19,19 @@ var profileCmd = &cobra.Command{
 		}
 		defer cpuFile.Close()
 
-		if err := pprof.StartCPUProfile(cpuFile); err != nil {
-			return err
+		if errCPU := pprof.StartCPUProfile(cpuFile); errCPU != nil {
+			return errCPU
 		}
 		defer pprof.StopCPUProfile()
 
 		// Run review (pass arguments manually)
-		if err := runReview(cmd, args); err != nil {
-			return err
+		if errReview := runReview(cmd, args); errReview != nil {
+			return errReview
 		}
 
 		// Memory profiling
-		memFile, err := os.Create("mem.prof")
+		var memFile *os.File
+		memFile, err = os.Create("mem.prof")
 		if err != nil {
 			return err
 		}
