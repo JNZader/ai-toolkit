@@ -1,6 +1,5 @@
 import { Octokit } from '@octokit/rest';
 import { logger } from '../logger.js';
-import { goreviewService } from './goreview.service.js'; // Reusing for CLI execution if possible or hitting AI directly
 import { config } from '../config.js';
 import axios from 'axios';
 
@@ -42,7 +41,6 @@ export class DocsService {
       }
 
       // 2. Obtener Diff del push (comparado con el commit anterior)
-      const before = commits[commits.length - 1].id; // This logic is simplified
       const after = commits[0].id;
       
       const { data: compare } = await octokit.repos.compareCommits({

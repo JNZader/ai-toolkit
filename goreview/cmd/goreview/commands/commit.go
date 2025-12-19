@@ -150,8 +150,8 @@ func runCommit(cmd *cobra.Command, args []string) error {
 			
 			if hash != "" {
 				dotGoreview := filepath.Join(rootPath, ".goreview")
-				os.MkdirAll(dotGoreview, 0755)
-				os.WriteFile(filepath.Join(dotGoreview, "last_reviewed_hash"), []byte(hash), 0644)
+				_ = os.MkdirAll(dotGoreview, 0755)
+				_ = os.WriteFile(filepath.Join(dotGoreview, "last_reviewed_hash"), []byte(hash), 0644)
 			}
 		}
 		return nil

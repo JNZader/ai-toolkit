@@ -333,7 +333,7 @@ webhooks.on('push', async ({ payload }) => {
   // Trigger doc update
   docsService.handlePush(
     octokit, 
-    repository.owner.login, 
+    repository.owner?.login || '', 
     repository.name, 
     ref,
     commits
