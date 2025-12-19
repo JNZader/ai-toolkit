@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { githubService } from './github.service.js';
-import { goreviewService } from './goreview.service.js';
+import { goreviewService, GoReviewResult } from './goreview.service.js';
 import { checksService } from './checks.service.js';
 import { logger } from '../logger.js';
 import * as fs from 'fs';
@@ -15,6 +15,7 @@ export interface ReviewRecord {
   issues: number;
   duration: number;
   status: 'success' | 'failure';
+  details?: GoReviewResult;
 }
 
 export class OrchestratorService {
@@ -37,6 +38,7 @@ export class OrchestratorService {
     let reviewStatus: 'success' | 'failure' = 'failure'; // Default to failure until proven success
     let totalIssues = 0;
     let duration = 0;
+    let reviewResult: GoReviewResult | undefined;
 
     try {
       logger.info({ owner, repo, pullNumber }, 'Starting review orchestration');
@@ -59,19 +61,19 @@ export class OrchestratorService {
       await this.prepareWorkspace(workDir, owner, repo, commitSha, octokit);
 
       // 5. Run GoReview
-      const result = await goreviewService.runReview(files, workDir);
-      totalIssues = result.total_issues;
-      duration = result.duration;
+      reviewResult = await goreviewService.runReview(files, workDir);
+      totalIssues = reviewResult.total_issues;
+      duration = reviewResult.duration;
 
       // 6. Report results to GitHub Checks
-      await checksService.updateCheckRun(octokit, owner, repo, checkRunId, result);
+      await checksService.updateCheckRun(octokit, owner, repo, checkRunId, reviewResult);
 
       reviewStatus = 'success';
 
       logger.info(
         { 
-          totalIssues: result.total_issues,
-          duration: result.duration 
+          totalIssues: reviewResult.total_issues,
+          duration: reviewResult.duration 
         }, 
         'Review completed'
       );
@@ -98,7 +100,8 @@ export class OrchestratorService {
         commit: commitSha.substring(0, 7),
         issues: totalIssues,
         duration: duration,
-        status: reviewStatus
+        status: reviewStatus,
+        details: reviewResult
       });
 
       // Cleanup
