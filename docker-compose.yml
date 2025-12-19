@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  # Ollama - LLM local para desarrollo
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ai-toolkit-ollama
-    ports:
-      - "11435:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    networks:
-      - ai-toolkit
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
-
   # GitHub App
   github-app:
     build:
@@ -31,13 +13,10 @@ services:
       - ./integrations/github-app/.env
     environment:
       - NODE_ENV=development
-      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_HOST=http://host.docker.internal:11434
     volumes:
       - ./integrations/github-app/config:/app/config:ro
       - github-app-logs:/app/logs
-    depends_on:
-      ollama:
-        condition: service_healthy
     networks:
       - ai-toolkit
     restart: unless-stopped
@@ -64,6 +43,5 @@ networks:
     driver: bridge
 
 volumes:
-  ollama-data:
   redis-data:
   github-app-logs:
