@@ -2,7 +2,7 @@
 
 provider:
   name: ollama
-  model: devstral-small-2:latest
+  model: qwen2.5-coder:14b
   base_url: http://localhost:11434
   timeout: 5m0s
   max_tokens: 4096
