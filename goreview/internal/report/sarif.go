@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/JNZader/ai-toolkit/goreview/internal/providers"
 	"github.com/JNZader/ai-toolkit/goreview/internal/review"
 )
 
@@ -69,13 +70,13 @@ func (r *SARIFReporter) buildResults(result *review.Result) []map[string]interfa
 	return results
 }
 
-func (r *SARIFReporter) mapSeverity(sev string) string {
+func (r *SARIFReporter) mapSeverity(sev providers.Severity) string {
 	switch sev {
-	case "critical", "error":
+	case providers.SeverityCritical, providers.SeverityError:
 		return "error"
-	case "warning":
+	case providers.SeverityWarning:
 		return "warning"
-	case "info":
+	case providers.SeverityInfo:
 		return "note"
 	default:
 		return "none"
