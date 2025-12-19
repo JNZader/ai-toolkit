@@ -54,8 +54,8 @@ func NewFileCache(cfg config.CacheConfig) (*FileCache, error) {
 		return nil, nil // Cache deshabilitado
 	}
 
-	if err := os.MkdirAll(cfg.Dir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create cache dir: %w", err)
+	if errMkdir := os.MkdirAll(cfg.Dir, 0755); errMkdir != nil {
+		return nil, fmt.Errorf("failed to create cache dir: %w", errMkdir)
 	}
 
 	// PERF-004: Calculate LRU cache size from MaxSizeMB
