@@ -1,0 +1,40 @@
+# docker-compose.production.yml
+version: '3.8'
+
+services:
+  github-app:
+    build:
+      context: ./integrations/github-app
+      dockerfile: Dockerfile
+    image: ghcr.io/jnzader/github-app:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    volumes:
+      - ./config/private-key.pem:/app/config/private-key.pem:ro
+    networks:
+      - ai-toolkit
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis-data:/data
+    networks:
+      - ai-toolkit
+
+networks:
+  ai-toolkit:
+    driver: bridge
+
+volumes:
+  redis-data:

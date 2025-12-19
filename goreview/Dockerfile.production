@@ -1,0 +1,38 @@
+# goreview/Dockerfile.production
+# Build stage
+FROM golang:1.23-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates
+
+WORKDIR /build
+
+# Cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Build with optimizations
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s" \
+    -o goreview \
+    ./cmd/goreview
+
+# Production stage
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates git
+
+# Create non-root user
+RUN addgroup -S goreview && adduser -S goreview -G goreview
+
+WORKDIR /app
+
+# Copy binary
+COPY --from=builder /build/goreview /usr/local/bin/goreview
+
+USER goreview
+
+ENTRYPOINT ["goreview"]
+CMD ["--help"]
