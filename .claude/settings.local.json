@@ -19,7 +19,8 @@
       "Bash(go install:*)",
       "Bash(govulncheck:*)",
       "Bash(go run:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(./build/goreview review:*)"
     ]
   }
 }

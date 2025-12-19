@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/JNZader/ai-toolkit/goreview/internal/config"
@@ -19,7 +18,6 @@ type RateLimiter struct {
 	tokens   chan struct{}
 	interval time.Duration
 	stopCh   chan struct{}
-	mu       sync.Mutex
 	started  bool
 }
 

@@ -42,9 +42,9 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Verificar si hay cambios staged
-	diff, err := gitRepo.GetStagedDiff(ctx)
-	if err != nil {
-		return err
+	diff, diffErr := gitRepo.GetStagedDiff(ctx)
+	if diffErr != nil {
+		return diffErr
 	}
 	if len(diff.Files) == 0 {
 		return fmt.Errorf("no staged changes found")
@@ -162,8 +162,8 @@ func runCommit(cmd *cobra.Command, args []string) error {
 			// Calculate hash using native Go (avoid shell command injection)
 			diffCmd := exec.Command("git", "diff", "--cached")
 			diffCmd.Dir = rootPath
-			diffOutput, err := diffCmd.Output()
-			if err == nil && len(diffOutput) > 0 {
+			diffOutput, diffErr := diffCmd.Output()
+			if diffErr == nil && len(diffOutput) > 0 {
 				hashBytes := sha256.Sum256(diffOutput)
 				hash := hex.EncodeToString(hashBytes[:])
 
