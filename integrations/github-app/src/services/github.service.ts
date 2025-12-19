@@ -5,7 +5,6 @@ import { logger } from '../logger.js';
 import { readFileSync } from 'fs';
 
 export class GitHubService {
-  private appOctokit: Octokit;
   private privateKey: string;
 
   constructor() {
@@ -15,14 +14,6 @@ export class GitHubService {
       logger.error({ error, path: config.GITHUB_PRIVATE_KEY_PATH }, 'Failed to read private key');
       this.privateKey = ''; // Will fail on auth
     }
-
-    this.appOctokit = new Octokit({
-      authStrategy: createAppAuth,
-      auth: {
-        appId: config.GITHUB_APP_ID,
-        privateKey: this.privateKey,
-      },
-    });
   }
 
   /**
