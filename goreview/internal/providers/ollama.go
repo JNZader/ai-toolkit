@@ -160,6 +160,91 @@ func (p *OllamaProvider) Review(ctx context.Context, request *ReviewRequest) (*R
 	}, nil
 }
 
+// GenerateDocumentation genera documentacion de los cambios
+func (p *OllamaProvider) GenerateDocumentation(ctx context.Context, diff string, context string) (string, error) {
+	var sb strings.Builder
+	sb.WriteString("You are a technical writer. Summarize the following code changes into a concise, professional changelog format.\n")
+	sb.WriteString("Use bullet points. Focus on the 'what' and 'why'. Do not describe line numbers, describe features/fixes.\n\n")
+	
+	if context != "" {
+		sb.WriteString("Context: " + context + "\n\n")
+	}
+	
+	sb.WriteString("Changes:\n")
+	sb.WriteString(diff)
+
+	reqBody := ollamaRequest{
+		Model:  p.model,
+		Prompt: sb.String(),
+		Stream: false,
+		Options: map[string]interface{}{
+			"temperature": 0.3, // Lower temp for more deterministic docs
+		},
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/api/generate", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var ollamaResp ollamaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return strings.TrimSpace(ollamaResp.Response), nil
+}
+
+// GenerateCommitMessage genera un mensaje de commit
+func (p *OllamaProvider) GenerateCommitMessage(ctx context.Context, diff string) (string, error) {
+	prompt := "You are an expert developer. Generate a concise Conventional Commit message for the following diff. Only return the message, no explanation.\n\nDiff:\n" + diff
+
+	reqBody := ollamaRequest{
+		Model:  p.model,
+		Prompt: prompt,
+		Stream: false,
+		Options: map[string]interface{}{
+			"temperature": 0.2,
+		},
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/api/generate", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var ollamaResp ollamaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(ollamaResp.Response), nil
+}
+
 // HealthCheck verifica que el provider esta disponible
 func (p *OllamaProvider) HealthCheck(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", p.baseURL+"/api/tags", nil)

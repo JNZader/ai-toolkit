@@ -144,16 +144,295 @@ func (p *OpenAIProvider) Review(ctx context.Context, request *ReviewRequest) (*R
 		return nil, fmt.Errorf("failed to parse openai response: %w", err)
 	}
 
-	return &ReviewResponse{
-		Issues:         issues,
-		Summary:        fmt.Sprintf("Review completed using %s. Found %d issues.", p.model, len(issues)) ,
-		Score:          100, // Placeholder
-		TokensUsed:     openaiResp.Usage.TotalTokens,
-		ProcessingTime: duration,
-	}, nil
-}
+		return &ReviewResponse{
 
-func (p *OpenAIProvider) HealthCheck(ctx context.Context) error {
+			Issues:         issues,
+
+			Summary:        fmt.Sprintf("Review completed using %s. Found %d issues.", p.model, len(issues)),
+
+			Score:          100, // Placeholder
+
+			TokensUsed:     openaiResp.Usage.TotalTokens,
+
+			ProcessingTime: duration,
+
+		}, nil
+
+	}
+
+	
+
+	// GenerateDocumentation genera documentacion
+
+	func (p *OpenAIProvider) GenerateDocumentation(ctx context.Context, diff string, context string) (string, error) {
+
+		prompt := fmt.Sprintf("You are a technical writer. Summarize the following code changes into a concise changelog.\n\nContext: %s\n\nChanges:\n%s", context, diff)
+
+	
+
+		reqBody := openaiRequest{
+
+			Model: p.model,
+
+			Messages: []message{
+
+				{Role: "system", Content: "You are a technical writer."},
+
+				{Role: "user", Content: prompt},
+
+			},
+
+			Temperature: 0.3,
+
+			MaxTokens:   p.maxTokens,
+
+		}
+
+	
+
+		jsonBody, err := json.Marshal(reqBody)
+
+		if err != nil {
+
+			return "", err
+
+		}
+
+	
+
+		req, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/chat/completions", bytes.NewBuffer(jsonBody))
+
+		if err != nil {
+
+			return "", err
+
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+
+		req.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	
+
+		resp, err := p.client.Do(req)
+
+		if err != nil {
+
+			return "", err
+
+		}
+
+		defer resp.Body.Close()
+
+	
+
+		var openaiResp openaiResponse
+
+		if err := json.NewDecoder(resp.Body).Decode(&openaiResp); err != nil {
+
+			return "", err
+
+		}
+
+	
+
+		if len(openaiResp.Choices) == 0 {
+
+			return "", fmt.Errorf("no choices in openai response")
+
+		}
+
+	
+
+			return openaiResp.Choices[0].Message.Content, nil
+
+	
+
+		}
+
+	
+
+		
+
+	
+
+		// GenerateCommitMessage genera un mensaje de commit
+
+	
+
+		func (p *OpenAIProvider) GenerateCommitMessage(ctx context.Context, diff string) (string, error) {
+
+	
+
+			prompt := "Generate a concise Conventional Commit message for this diff. Output only the message."
+
+	
+
+			
+
+	
+
+			reqBody := openaiRequest{
+
+	
+
+				Model: p.model,
+
+	
+
+				Messages: []message{
+
+	
+
+					{Role: "system", Content: prompt},
+
+	
+
+					{Role: "user", Content: diff},
+
+	
+
+				},
+
+	
+
+				Temperature: 0.2,
+
+	
+
+				MaxTokens:   100,
+
+	
+
+			}
+
+	
+
+		
+
+	
+
+			jsonBody, err := json.Marshal(reqBody)
+
+	
+
+			if err != nil {
+
+	
+
+				return "", err
+
+	
+
+			}
+
+	
+
+		
+
+	
+
+			req, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/chat/completions", bytes.NewBuffer(jsonBody))
+
+	
+
+			if err != nil {
+
+	
+
+				return "", err
+
+	
+
+			}
+
+	
+
+			req.Header.Set("Content-Type", "application/json")
+
+	
+
+			req.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	
+
+		
+
+	
+
+			resp, err := p.client.Do(req)
+
+	
+
+			if err != nil {
+
+	
+
+				return "", err
+
+	
+
+			}
+
+	
+
+			defer resp.Body.Close()
+
+	
+
+		
+
+	
+
+			var openaiResp openaiResponse
+
+	
+
+			if err := json.NewDecoder(resp.Body).Decode(&openaiResp); err != nil {
+
+	
+
+				return "", err
+
+	
+
+			}
+
+	
+
+		
+
+	
+
+			if len(openaiResp.Choices) == 0 {
+
+	
+
+				return "", fmt.Errorf("no choices in openai response")
+
+	
+
+			}
+
+	
+
+		
+
+	
+
+			return openaiResp.Choices[0].Message.Content, nil
+
+	
+
+		}
+
+	
+
+		
+
+	
+
+		func (p *OpenAIProvider) HealthCheck(ctx context.Context) error {
 	// Simple models check
 	req, err := http.NewRequestWithContext(ctx, "GET", p.baseURL+"/models", nil)
 	if err != nil {

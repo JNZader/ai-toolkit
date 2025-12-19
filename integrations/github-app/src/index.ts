@@ -3,6 +3,8 @@ import { Webhooks, createNodeMiddleware } from '@octokit/webhooks';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { orchestratorService } from './services/orchestrator.service.js';
+import { docsService } from './services/docs.service.js';
+import { githubService } from './services/github.service.js';
 
 const app: Express = express();
 
@@ -313,6 +315,29 @@ webhooks.on(['pull_request.opened', 'pull_request.synchronize'], async ({ payloa
   ).catch(err => {
     logger.error({ err }, 'Orchestration error (async)');
   });
+});
+
+webhooks.on('push', async ({ payload }) => {
+  const { repository, ref, commits, installation } = payload;
+  
+  if (!installation) return;
+
+  // Only process pushes to main/develop branches to avoid noise
+  if (!ref.includes('main') && !ref.includes('develop')) return;
+
+  logger.info({ repo: repository.full_name, ref }, 'Push received');
+
+  // Authenticate
+  const octokit = await githubService.getInstallationClient(installation.id);
+
+  // Trigger doc update
+  docsService.handlePush(
+    octokit, 
+    repository.owner.login, 
+    repository.name, 
+    ref,
+    commits
+  ).catch(err => logger.error(err, 'Docs update failed'));
 });
 
 // Iniciar servidor

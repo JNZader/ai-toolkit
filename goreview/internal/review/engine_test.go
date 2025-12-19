@@ -25,6 +25,12 @@ func (m *MockProvider) Review(ctx context.Context, req *providers.ReviewRequest)
 		},
 	}, nil
 }
+func (m *MockProvider) GenerateDocumentation(ctx context.Context, diff string, context string) (string, error) {
+	return "Mock documentation", nil
+}
+func (m *MockProvider) GenerateCommitMessage(ctx context.Context, diff string) (string, error) {
+	return "feat: mock commit", nil
+}
 
 // MockGit
 type MockGit struct{}

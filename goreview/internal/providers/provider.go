@@ -12,6 +12,12 @@ type Provider interface {
 	// Review realiza un code review
 	Review(ctx context.Context, request *ReviewRequest) (*ReviewResponse, error)
 
+	// GenerateDocumentation genera una explicacion/documentacion de los cambios
+	GenerateDocumentation(ctx context.Context, diff string, context string) (string, error)
+
+	// GenerateCommitMessage genera un mensaje de commit basado en los cambios
+	GenerateCommitMessage(ctx context.Context, diff string) (string, error)
+
 	// HealthCheck verifica que el provider esta disponible
 	HealthCheck(ctx context.Context) error
 
