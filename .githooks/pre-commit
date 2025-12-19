@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# Redirigir output a stderr para que Git lo muestre
+exec 1>&2
+
+echo "🔍 GoReview: Analizando cambios staged..."
+
+# 1. Encontrar la raiz del repo
+ROOT_DIR=$(git rev-parse --show-toplevel)
+
+# 2. Compilar Goreview (para asegurar que usamos la version actual)
+# En un entorno real, quizas preferirias usar un binario ya instalado en el PATH
+echo "🔨 Compilando Goreview..."
+cd "$ROOT_DIR/goreview"
+if ! go build -o build/goreview ./cmd/goreview; then
+    echo "❌ Error de compilacion en GoReview. Commit bloqueado."
+    exit 1
+fi
+cd "$ROOT_DIR"
+
+# 3. Ejecutar Review
+# Usamos el binario que acabamos de compilar
+# --staged: Solo analiza lo que vas a commitear
+# --format markdown: Para que se vea bonito en consola
+"$ROOT_DIR/goreview/build/goreview" review --staged --format markdown
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "❌ GoReview encontro problemas."
+    echo "💡 Corrige los errores arriba o usa 'git commit --no-verify' para forzar (no recomendado)."
+    exit 1
+fi
+
+echo "✅ GoReview paso exitosamente."
+exit 0

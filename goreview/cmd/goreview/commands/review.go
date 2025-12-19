@@ -134,5 +134,10 @@ func runReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate report: %w", err)
 	}
 
+	// Si hay issues, devolvemos error para que el pre-commit hook falle
+	if result.TotalIssues > 0 {
+		return fmt.Errorf("found %d issues during review", result.TotalIssues)
+	}
+
 	return nil
 }
