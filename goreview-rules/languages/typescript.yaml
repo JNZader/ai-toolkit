@@ -1,0 +1,29 @@
+---
+rules:
+  - id: TS-001
+    description: "Usage of 'any' type"
+    severity: warning
+    category: type-safety
+    languages: ["typescript"]
+    prompt_context: >
+      Identify usages of the 'any' type which bypasses
+      type checking. Suggest using 'unknown' or a specific type.
+
+  - id: TS-002
+    description: "Non-null assertion operator (!)"
+    severity: warning
+    category: safety
+    languages: ["typescript"]
+    prompt_context: >
+      Check for the usage of the non-null assertion
+      operator '!' and suggest using optional chaining '?'
+      or null checks instead.
+
+  - id: TS-003
+    description: "Floating promises"
+    severity: error
+    category: concurrency
+    languages: ["typescript", "javascript"]
+    prompt_context: >
+      Identify promises that are created but not awaited
+      or returned, which can lead to unhandled errors.
