@@ -138,6 +138,25 @@ func runCommit(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
+		// Obtener la raiz del repo
+		rootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
+		var rootPathBytes []byte
+		rootPathBytes, err = rootCmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to get git root path: %w", err)
+		}
+		rootPath := strings.TrimSpace(string(rootPathBytes))
+
+		// Generar reporte de exito tambien para que sea consistente con el hook
+		var reviewReportOutputBytes []byte
+		reviewReportOutputBytes, err = exec.Command(filepath.Join(rootPath, "goreview/build/goreview"), "review", "--staged", "--format", "markdown").Output()
+		if err != nil {
+			fmt.Printf("⚠️  Fallo al generar el reporte de exito: %v\n", err)
+		}
+		_ = os.MkdirAll(filepath.Join(rootPath, "logs"), 0755)
+		_ = os.WriteFile(filepath.Join(rootPath, "logs", "last_successful_review.md"), reviewReportOutputBytes, 0644)
+		fmt.Println("📄 Reporte detallado guardado en logs/last_successful_review.md")
+
 		// 6. Actualizar el hash para que el hook sepa que ya revisamos esto
 		// Buscamos la raiz del repo
 		rootCmd := exec.Command("git", "rev-parse", "--show-toplevel")

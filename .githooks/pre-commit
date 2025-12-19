@@ -34,17 +34,24 @@ EXIT_CODE=$?
 
 echo "$REVIEW_OUTPUT"
 
+# Crear directorio de logs si no existe
+mkdir -p "$ROOT_DIR/logs"
+
 if [ $EXIT_CODE -ne 0 ]; then
     echo ""
     echo "❌ GoReview encontro problemas."
     
     # Guardar el reporte para analisis
-    mkdir -p "$ROOT_DIR/logs"
     echo "$REVIEW_OUTPUT" > "$ROOT_DIR/logs/last_failed_review.md"
-    echo "📄 Reporte guardado en logs/last_failed_review.md"
+    echo "📄 Reporte detallado guardado en logs/last_failed_review.md"
 
     echo "💡 Corrige los errores arriba o usa 'git commit --no-verify' para forzar (no recomendado)."
     exit 1
+else
+    # Guardar el reporte de exito
+    echo "$REVIEW_OUTPUT" > "$ROOT_DIR/logs/last_successful_review.md"
+    echo "✅ GoReview paso exitosamente."
+    echo "📄 Reporte detallado guardado en logs/last_successful_review.md"
 fi
 
 # Guardar el hash del review exitoso
