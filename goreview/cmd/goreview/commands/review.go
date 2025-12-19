@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/JNZader/ai-toolkit/goreview/internal/cache"
