@@ -18,11 +18,9 @@ func NewReporter(format string) Reporter {
 	case "markdown", "md":
 		return &MarkdownReporter{}
 	case "json":
-		// return &JSONReporter{}
-		return nil // TODO
+		return &JSONReporter{}
 	case "sarif":
-		// return &SARIFReporter{}
-		return nil // TODO
+		return &SARIFReporter{}
 	default:
 		return &MarkdownReporter{}
 	}
