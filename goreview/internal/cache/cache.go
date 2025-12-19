@@ -102,14 +102,14 @@ func (c *FileCache) Set(key string, response *providers.ReviewResponse) error {
 // ComputeKey genera SHA-256 del request
 func (c *FileCache) ComputeKey(req *providers.ReviewRequest) string {
 	// Incluimos todos los campos relevantes en el hash
-	input := fmt.Sprintf("%s|%s|%s|%v|%s", 
-		req.Diff, 
-		req.Language, 
-		req.Context, 
+	input := fmt.Sprintf("%s|%s|%s|%v|%s",
+		req.Diff,
+		req.Language,
+		req.Context,
 		req.Rules,
 		req.FilePath,
 	)
-	
+
 	hash := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(hash[:])
 }
@@ -127,9 +127,9 @@ func (c *FileCache) getPath(key string) string {
 	if len(key) < 2 {
 		return filepath.Join(c.dir, key)
 	}
-	
+
 	subdir := filepath.Join(c.dir, key[:2])
 	_ = os.MkdirAll(subdir, 0755)
-	
+
 	return filepath.Join(subdir, key)
 }

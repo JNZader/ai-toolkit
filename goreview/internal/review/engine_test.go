@@ -15,9 +15,9 @@ import (
 // MockProvider
 type MockProvider struct{}
 
-func (m *MockProvider) Name() string { return "mock" }
+func (m *MockProvider) Name() string                          { return "mock" }
 func (m *MockProvider) HealthCheck(ctx context.Context) error { return nil }
-func (m *MockProvider) Close() error { return nil }
+func (m *MockProvider) Close() error                          { return nil }
 func (m *MockProvider) Review(ctx context.Context, req *providers.ReviewRequest) (*providers.ReviewResponse, error) {
 	return &providers.ReviewResponse{
 		Issues: []providers.Issue{
@@ -37,11 +37,15 @@ func (m *MockGit) GetStagedDiff(ctx context.Context) (*git.Diff, error) {
 	}, nil
 }
 func (m *MockGit) GetCommitDiff(ctx context.Context, hash string) (*git.Diff, error) { return nil, nil }
-func (m *MockGit) GetBranchDiff(ctx context.Context, branch string) (*git.Diff, error) { return nil, nil }
-func (m *MockGit) GetFileDiff(ctx context.Context, files []string) (*git.Diff, error) { return nil, nil }
+func (m *MockGit) GetBranchDiff(ctx context.Context, branch string) (*git.Diff, error) {
+	return nil, nil
+}
+func (m *MockGit) GetFileDiff(ctx context.Context, files []string) (*git.Diff, error) {
+	return nil, nil
+}
 func (m *MockGit) GetCurrentBranch(ctx context.Context) (string, error) { return "main", nil }
-func (m *MockGit) GetHeadCommit(ctx context.Context) (string, error) { return "hash", nil }
-func (m *MockGit) IsClean(ctx context.Context) (bool, error) { return true, nil }
+func (m *MockGit) GetHeadCommit(ctx context.Context) (string, error)    { return "hash", nil }
+func (m *MockGit) IsClean(ctx context.Context) (bool, error)            { return true, nil }
 
 func TestEngine_Run(t *testing.T) {
 	cfg := &config.Config{
@@ -51,10 +55,10 @@ func TestEngine_Run(t *testing.T) {
 	mockGit := &MockGit{}
 	mockProvider := &MockProvider{}
 	tmpDir := t.TempDir()
-	
+
 	cacheCfg := config.CacheConfig{Enabled: true, Dir: tmpDir, TTL: time.Hour}
 	fileCache, _ := cache.NewFileCache(cacheCfg)
-	
+
 	ruleSet := []rules.Rule{}
 
 	engine := NewEngine(cfg, mockGit, mockProvider, fileCache, ruleSet)

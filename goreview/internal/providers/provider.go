@@ -98,13 +98,13 @@ type Location struct {
 type IssueType string
 
 const (
-	IssueTypeBug         IssueType = "bug"
-	IssueTypeSecurity    IssueType = "security"
-	IssueTypePerformance IssueType = "performance"
-	IssueTypeStyle       IssueType = "style"
-	IssueTypeMaintenance IssueType = "maintenance"
+	IssueTypeBug           IssueType = "bug"
+	IssueTypeSecurity      IssueType = "security"
+	IssueTypePerformance   IssueType = "performance"
+	IssueTypeStyle         IssueType = "style"
+	IssueTypeMaintenance   IssueType = "maintenance"
 	IssueTypeDocumentation IssueType = "documentation"
-	IssueTypeBestPractice IssueType = "best_practice"
+	IssueTypeBestPractice  IssueType = "best_practice"
 )
 
 // Severity niveles de severidad

@@ -25,11 +25,11 @@ type OllamaProvider struct {
 
 // ollamaRequest estructura de request para Ollama
 type ollamaRequest struct {
-	Model    string                 `json:"model"`
-	Prompt   string                 `json:"prompt"`
-	Stream   bool                   `json:"stream"`
-	Options  map[string]interface{} `json:"options,omitempty"`
-	Format   string                 `json:"format,omitempty"`
+	Model   string                 `json:"model"`
+	Prompt  string                 `json:"prompt"`
+	Stream  bool                   `json:"stream"`
+	Options map[string]interface{} `json:"options,omitempty"`
+	Format  string                 `json:"format,omitempty"`
 }
 
 // ollamaResponse estructura de response de Ollama
@@ -130,7 +130,7 @@ func (p *OllamaProvider) Review(ctx context.Context, request *ReviewRequest) (*R
 	cleanResp = strings.TrimPrefix(cleanResp, "```json")
 	cleanResp = strings.TrimPrefix(cleanResp, "```")
 	cleanResp = strings.TrimSuffix(cleanResp, "```")
-	
+
 	// Intentar parsear como lista []Issue
 	if err := json.Unmarshal([]byte(cleanResp), &issues); err != nil {
 		// Si falla, intentar como objeto simple Issue
@@ -191,7 +191,7 @@ func (p *OllamaProvider) buildPrompt(req *ReviewRequest) string {
 
 	sb.WriteString("You are an expert code reviewer and security auditor. ")
 	sb.WriteString("Your task is to analyze the following code changes and identify bugs, security vulnerabilities, and quality issues.\n\n")
-	
+
 	if req.Language != "" {
 		sb.WriteString(fmt.Sprintf("Language: %s\n", req.Language))
 	}
@@ -212,7 +212,7 @@ func (p *OllamaProvider) buildPrompt(req *ReviewRequest) string {
 	sb.WriteString("3. Ignore minor formatting issues unless they affect readability significantly.\n")
 	sb.WriteString("4. Provide concrete suggestions for fixing each issue.\n")
 	sb.WriteString("5. Return the result strictly as a JSON array of issue objects.\n")
-	
+
 	sb.WriteString("\nResponse Format (JSON Array):\n")
 	sb.WriteString(`[
   {

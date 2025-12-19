@@ -8,7 +8,7 @@ import (
 
 func TestLoader_Load(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Crear archivo de reglas dummy
 	content := []byte(`
 rules:

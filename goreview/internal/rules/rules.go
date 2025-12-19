@@ -16,15 +16,15 @@ type RuleSet struct {
 
 // Rule definicion de una regla
 type Rule struct {
-	ID          string   `yaml:"id"`
-	Description string   `yaml:"description"`
-	Severity    string   `yaml:"severity"`
-	Category    string   `yaml:"category"`
-	Languages   []string `yaml:"languages"`
-	Tags        []string `yaml:"tags"`
-	Patterns    []string `yaml:"patterns"` // Regex patterns to match files/content
-	AntiPatterns []string `yaml:"anti_patterns"` // Regex to exclude
-	PromptContext string `yaml:"prompt_context"` // Contexto extra para el LLM
+	ID            string   `yaml:"id"`
+	Description   string   `yaml:"description"`
+	Severity      string   `yaml:"severity"`
+	Category      string   `yaml:"category"`
+	Languages     []string `yaml:"languages"`
+	Tags          []string `yaml:"tags"`
+	Patterns      []string `yaml:"patterns"`       // Regex patterns to match files/content
+	AntiPatterns  []string `yaml:"anti_patterns"`  // Regex to exclude
+	PromptContext string   `yaml:"prompt_context"` // Contexto extra para el LLM
 }
 
 // Loader carga reglas desde archivos

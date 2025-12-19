@@ -6,13 +6,13 @@ import (
 	"io"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/JNZader/ai-toolkit/goreview/internal/cache"
 	"github.com/JNZader/ai-toolkit/goreview/internal/git"
 	"github.com/JNZader/ai-toolkit/goreview/internal/providers"
 	"github.com/JNZader/ai-toolkit/goreview/internal/report"
 	"github.com/JNZader/ai-toolkit/goreview/internal/review"
 	"github.com/JNZader/ai-toolkit/goreview/internal/rules"
+	"github.com/spf13/cobra"
 )
 
 var reviewCmd = &cobra.Command{
@@ -44,10 +44,10 @@ Examples:
 }
 
 var (
-	staged   bool
-	commit   string
-	base     string
-	noCache  bool
+	staged  bool
+	commit  string
+	base    string
+	noCache bool
 )
 
 func init() {
@@ -102,7 +102,7 @@ func runReview(cmd *cobra.Command, args []string) error {
 
 	// Rules
 	// TODO: Load from configured directory
-	ruleSet := []rules.Rule{} 
+	ruleSet := []rules.Rule{}
 
 	// 3. Crear y ejecutar Engine
 	engine := review.NewEngine(cfg, gitRepo, provider, reviewCache, ruleSet)

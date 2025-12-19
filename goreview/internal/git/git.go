@@ -37,15 +37,15 @@ type Diff struct {
 
 // FileDiff representa los cambios en un archivo
 type FileDiff struct {
-	Path       string      `json:"path"`
-	OldPath    string      `json:"old_path,omitempty"` // Para renames
-	Status     FileStatus  `json:"status"`
-	Language   string      `json:"language"`
-	Hunks      []Hunk      `json:"hunks"`
-	Stats      DiffStats   `json:"stats"`
-	IsBinary   bool        `json:"is_binary"`
-	Content    string      `json:"-"` // Contenido completo del archivo
-	OldContent string      `json:"-"` // Contenido anterior (para context)
+	Path       string     `json:"path"`
+	OldPath    string     `json:"old_path,omitempty"` // Para renames
+	Status     FileStatus `json:"status"`
+	Language   string     `json:"language"`
+	Hunks      []Hunk     `json:"hunks"`
+	Stats      DiffStats  `json:"stats"`
+	IsBinary   bool       `json:"is_binary"`
+	Content    string     `json:"-"` // Contenido completo del archivo
+	OldContent string     `json:"-"` // Contenido anterior (para context)
 }
 
 // FileStatus representa el estado de un archivo
@@ -61,12 +61,12 @@ const (
 
 // Hunk representa una seccion de cambios
 type Hunk struct {
-	OldStart int      `json:"old_start"`
-	OldLines int      `json:"old_lines"`
-	NewStart int      `json:"new_start"`
-	NewLines int      `json:"new_lines"`
-	Header   string   `json:"header"`
-	Lines    []Line   `json:"lines"`
+	OldStart int    `json:"old_start"`
+	OldLines int    `json:"old_lines"`
+	NewStart int    `json:"new_start"`
+	NewLines int    `json:"new_lines"`
+	Header   string `json:"header"`
+	Lines    []Line `json:"lines"`
 }
 
 // Line representa una linea de cambio

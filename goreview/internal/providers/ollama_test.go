@@ -65,7 +65,7 @@ func TestFactory_Create(t *testing.T) {
 		Name: "ollama",
 	}
 	factory := NewFactory(cfg)
-	
+
 	provider, err := factory.Create()
 	if err != nil {
 		t.Fatalf("factory failed to create ollama provider: %v", err)

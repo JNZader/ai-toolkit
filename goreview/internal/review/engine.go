@@ -68,7 +68,7 @@ func (e *Engine) Run(ctx context.Context) (*Result, error) {
 		wg.Add(1)
 		go func(f git.FileDiff) {
 			defer wg.Done()
-			semaphore <- struct{}{}		// Acquire
+			semaphore <- struct{}{}        // Acquire
 			defer func() { <-semaphore }() // Release
 
 			res, err := e.reviewFile(ctx, f)
@@ -122,7 +122,7 @@ func (e *Engine) getDiff(ctx context.Context) (*git.Diff, error) {
 func (e *Engine) reviewFile(ctx context.Context, file git.FileDiff) (*FileResult, error) {
 	// Filtrar reglas aplicables
 	applicableRules := rules.Filter(e.rules, file.Language, file.Path)
-	
+
 	// Construir contexto de reglas
 	var ruleDescriptions []string
 	for _, r := range applicableRules {

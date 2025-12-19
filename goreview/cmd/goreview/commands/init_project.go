@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/JNZader/ai-toolkit/goreview/internal/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"github.com/JNZader/ai-toolkit/goreview/internal/config"
 )
 
 var initCmd = &cobra.Command{
@@ -15,7 +15,7 @@ var initCmd = &cobra.Command{
 	Short: "Initialize GoReview in the current project",
 	Long: `Sets up GoReview in the current directory.
 1. Creates a default .goreview.yaml configuration file.
-2. Installs a git pre-commit hook to run reviews automatically.`, 
+2. Installs a git pre-commit hook to run reviews automatically.`,
 	RunE: runInit,
 }
 
@@ -32,12 +32,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🚀 Initializing GoReview in %s\n", cwd)
 
 	// 1. Crear Config
-	if err := createConfigFile(cwd); err != nil {
+	if err = createConfigFile(cwd); err != nil {
 		return err
 	}
 
 	// 2. Instalar Git Hook
-	if err := installGitHook(cwd); err != nil {
+	if err = installGitHook(cwd); err != nil {
 		fmt.Printf("⚠️  Could not install git hook: %v\n", err)
 	}
 
@@ -83,7 +83,7 @@ func installGitHook(cwd string) error {
 	}
 
 	hookPath := filepath.Join(hooksDir, "pre-commit")
-	
+
 	// Script del hook
 	hookContent := `#!/bin/sh
 # GoReview Pre-commit Hook

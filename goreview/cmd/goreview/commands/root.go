@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/JNZader/ai-toolkit/goreview/internal/config"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -84,7 +84,7 @@ func initConfig(cmd *cobra.Command) error {
 	// Usamos cmd.Flags() en lugar de rootCmd.Flags() para evitar ciclo,
 	// o mejor aun, usamos las variables globales si estan vinculadas,
 	// pero como usamos StringP sin variable global para provider/model, accedemos via cmd.Flag
-	
+
 	if provider, _ := cmd.Flags().GetString("provider"); provider != "" {
 		cfg.Provider.Name = provider
 	}

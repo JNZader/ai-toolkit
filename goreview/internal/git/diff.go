@@ -112,7 +112,7 @@ func (r *GitRepository) parseDiff(rawDiff string) (*Diff, error) {
 		if currentHunk != nil && len(line) > 0 {
 			var diffLine Line
 			switch line[0] {
-			case '+' :
+			case '+':
 				diffLine = Line{
 					Type:    LineAddition,
 					Content: line[1:],
@@ -121,7 +121,7 @@ func (r *GitRepository) parseDiff(rawDiff string) (*Diff, error) {
 				newLineNum++
 				currentFile.Stats.Additions++
 				diff.Stats.Additions++
-			case '-' :
+			case '-':
 				diffLine = Line{
 					Type:    LineDeletion,
 					Content: line[1:],
@@ -130,7 +130,7 @@ func (r *GitRepository) parseDiff(rawDiff string) (*Diff, error) {
 				oldLineNum++
 				currentFile.Stats.Deletions++
 				diff.Stats.Deletions++
-			case ' ' :
+			case ' ':
 				diffLine = Line{
 					Type:    LineContext,
 					Content: line[1:],
