@@ -15,16 +15,16 @@ func TestNewRepository(t *testing.T) {
 	// Inicializar git
 	cmd := exec.Command("git", "init")
 	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to init git: %v", err)
+	if errInit := cmd.Run(); errInit != nil {
+		t.Fatalf("failed to init git: %v", errInit)
 	}
 
 	// Configurar git
-	if err := exec.Command("git", "-C", tmpDir, "config", "user.email", "test@test.com").Run(); err != nil {
-		t.Fatalf("failed to config git email: %v", err)
+	if errConfig := exec.Command("git", "-C", tmpDir, "config", "user.email", "test@test.com").Run(); errConfig != nil {
+		t.Fatalf("failed to config git email: %v", errConfig)
 	}
-	if err := exec.Command("git", "-C", tmpDir, "config", "user.name", "Test").Run(); err != nil {
-		t.Fatalf("failed to config git name: %v", err)
+	if errConfig := exec.Command("git", "-C", tmpDir, "config", "user.name", "Test").Run(); errConfig != nil {
+		t.Fatalf("failed to config git name: %v", errConfig)
 	}
 
 	repo, err := NewRepository(tmpDir, nil)
@@ -134,20 +134,20 @@ func TestStagedDiff(t *testing.T) {
 	for _, args := range cmds {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Dir = tmpDir
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("failed to run git command %v: %v", args, err)
+		if errCmd := cmd.Run(); errCmd != nil {
+			t.Fatalf("failed to run git command %v: %v", args, errCmd)
 		}
 	}
 
 	// Crear archivo
 	testFile := filepath.Join(tmpDir, "test.go")
-	if err := os.WriteFile(testFile, []byte("package main\n\nfunc main() {}\n"), 0644); err != nil {
-		t.Fatalf("failed to write test file: %v", err)
+	if errWrite := os.WriteFile(testFile, []byte("package main\n\nfunc main() {}\n"), 0644); errWrite != nil {
+		t.Fatalf("failed to write test file: %v", errWrite)
 	}
 
 	// Stage archivo
-	if err := exec.Command("git", "-C", tmpDir, "add", "test.go").Run(); err != nil {
-		t.Fatalf("failed to stage file: %v", err)
+	if errStage := exec.Command("git", "-C", tmpDir, "add", "test.go").Run(); errStage != nil {
+		t.Fatalf("failed to stage file: %v", errStage)
 	}
 
 	repo, _ := NewRepository(tmpDir, nil)
