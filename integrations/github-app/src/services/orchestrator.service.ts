@@ -6,27 +6,7 @@ import { logger } from '../logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { simpleGit } from 'simple-git';
-
-/**
- * Sanitizes a path component to prevent path traversal attacks.
- * Only allows alphanumeric characters, hyphens, and underscores.
- */
-function sanitizePath(input: string): string {
-  return input.replace(/[^a-zA-Z0-9\-_]/g, '_');
-}
-
-/**
- * Validates that a resolved path stays within the expected base directory.
- * Prevents path traversal attacks.
- */
-function validatePathWithinBase(resolvedPath: string, baseDir: string): void {
-  const normalizedResolved = path.resolve(resolvedPath);
-  const normalizedBase = path.resolve(baseDir);
-
-  if (!normalizedResolved.startsWith(normalizedBase)) {
-    throw new Error('Path traversal attempt detected');
-  }
-}
+import { auditService } from './audit.service.js';
 
 export interface ReviewRecord {
   timestamp: string;
@@ -122,26 +102,29 @@ export class OrchestratorService {
         }
       }
     } finally {
-      // Record history
-      this.history.push({
-        timestamp: new Date().toISOString(),
-        repo: `${owner}/${repo}`,
-        pr: pullNumber,
-        commit: commitSha.substring(0, 7),
-        issues: totalIssues,
-        duration: duration,
-        status: reviewStatus,
-        details: reviewResult
-      });
-
-      // Cleanup
-      try {
-        fs.rmSync(workDir, { recursive: true, force: true });
-      } catch (e) {
-        logger.warn({ error: e, workDir }, 'Failed to cleanup workspace');
-      }
-    }
-  }
+          // Record history (in-memory)
+          const record: ReviewRecord = {
+            timestamp: new Date().toISOString(),
+            repo: `${owner}/${repo}`,
+            pr: pullNumber,
+            commit: commitSha.substring(0, 7),
+            issues: totalIssues,
+            duration: duration,
+            status: reviewStatus,
+            details: reviewResult
+          };
+          this.history.push(record);
+      
+          // Record persistent audit log
+          await auditService.recordReview(record);
+      
+          // Cleanup
+          try {
+            fs.rmSync(workDir, { recursive: true, force: true });
+          } catch (e) {
+            logger.warn({ error: e, workDir }, 'Failed to cleanup workspace');
+          }
+        }  }
 
   private async prepareWorkspace(
     workDir: string,

@@ -29,12 +29,20 @@ fi
 cd "$ROOT_DIR"
 
 # 4. Ejecutar Review
-"$ROOT_DIR/goreview/build/goreview" review --staged --format markdown
+REVIEW_OUTPUT=$("$ROOT_DIR/goreview/build/goreview" review --staged --format markdown 2>&1)
 EXIT_CODE=$?
+
+echo "$REVIEW_OUTPUT"
 
 if [ $EXIT_CODE -ne 0 ]; then
     echo ""
     echo "❌ GoReview encontro problemas."
+    
+    # Guardar el reporte para analisis
+    mkdir -p "$ROOT_DIR/logs"
+    echo "$REVIEW_OUTPUT" > "$ROOT_DIR/logs/last_failed_review.md"
+    echo "📄 Reporte guardado en logs/last_failed_review.md"
+
     echo "💡 Corrige los errores arriba o usa 'git commit --no-verify' para forzar (no recomendado)."
     exit 1
 fi

@@ -14,7 +14,11 @@
       "Bash(go test:*)",
       "Bash(pnpm add:*)",
       "Bash(go get:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(go list:*)",
+      "Bash(go install:*)",
+      "Bash(govulncheck:*)",
+      "Bash(go run:*)"
     ]
   }
 }
