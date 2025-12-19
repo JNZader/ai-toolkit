@@ -36,7 +36,7 @@ app.get('/health', (_req, res) => {
 app.get('/dashboard', (_req, res) => {
   const history = orchestratorService.getHistory();
   
-  const historyRows = history.map(h => `
+  const historyRows = history.map((h, index) => `
     <tr>
         <td>${new Date(h.timestamp).toLocaleTimeString()}</td>
         <td>${h.repo}</td>
@@ -45,6 +45,7 @@ app.get('/dashboard', (_req, res) => {
         <td><strong>${h.issues}</strong></td>
         <td>${h.duration}s</td>
         <td><span class="status ${h.status === 'success' ? 'ok' : 'error'}">${h.status.toUpperCase()}</span></td>
+        <td><button onclick="showDetails(${index})" class="btn btn-sm">View Details</button></td>
     </tr>
   `).join('');
 
@@ -71,6 +72,18 @@ app.get('/dashboard', (_req, res) => {
         .btn:hover { background: #f9fafb; }
         .btn-primary { background: #2563eb; color: white; border-color: #1d4ed8; }
         .btn-primary:hover { background: #1d4ed8; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        
+        dialog { padding: 0; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 800px; width: 90%; }
+        dialog::backdrop { background: rgba(0,0,0,0.5); }
+        .modal-header { padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f9fafb; }
+        .modal-body { padding: 1rem; max-height: 70vh; overflow-y: auto; }
+        .issue-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; background: #fff; }
+        .issue-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+        .severity { text-transform: uppercase; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+        .sev-critical { background: #fee2e2; color: #991b1b; }
+        .sev-warning { background: #fef3c7; color: #92400e; }
+        .sev-info { background: #dbeafe; color: #1e40af; }
     </style>
 </head>
 <body>
@@ -113,6 +126,7 @@ app.get('/dashboard', (_req, res) => {
                     <th>Issues</th>
                     <th>Duration</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -122,7 +136,80 @@ app.get('/dashboard', (_req, res) => {
         `}
     </div>
 
+    <dialog id="detailsModal">
+        <div class="modal-header">
+            <h3 style="margin:0">Review Details</h3>
+            <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; font-size:1.5rem;">&times;</button>
+        </div>
+        <div id="modalContent" class="modal-body"></div>
+    </dialog>
+
     <script>
+        // Inject history data safely
+        const reviewData = ${JSON.stringify(history).replace(/</g, '\\u003c')};
+
+        function showDetails(index) {
+            const record = reviewData[index];
+            const modal = document.getElementById('detailsModal');
+            const content = document.getElementById('modalContent');
+            
+            if (!record.details || !record.details.files) {
+                content.innerHTML = '<p>No detailed results available for this review.</p>';
+                modal.showModal();
+                return;
+            }
+
+            let html = '';
+            
+            record.details.files.forEach(file => {
+                if (file.response && file.response.issues && file.response.issues.length > 0) {
+                    html += '<h4>📄 ' + escapeHtml(file.file) + '</h4>';
+                    
+                    file.response.issues.forEach(issue => {
+                        const sevClass = 'sev-' + (issue.severity || 'info').toLowerCase();
+                        html += '<div class="issue-card">';
+                        html += '<div class="issue-header">';
+                        html += '<strong>' + escapeHtml(issue.type) + '</strong>';
+                        html += '<span class="severity ' + sevClass + '">' + escapeHtml(issue.severity) + '</span>';
+                        html += '</div>';
+                        html += '<p>' + escapeHtml(issue.message) + '</p>';
+                        
+                        if (issue.suggestion) {
+                            html += '<div style="background:#f8fafc; padding:0.5rem; border-radius:4px; font-size:0.9em;">';
+                            html += '<strong>💡 Suggestion:</strong><br>' + escapeHtml(issue.suggestion);
+                            html += '</div>';
+                        }
+                        
+                        if (issue.location) {
+                            html += '<p style="font-size:0.8rem; color:#6b7280; margin-top:0.5rem;">Line: ' + issue.location.start_line + '</p>';
+                        }
+                        html += '</div>';
+                    });
+                }
+            });
+
+            if (html === '') {
+                html = '<p>✅ No issues found in analyzed files.</p>';
+            }
+
+            content.innerHTML = html;
+            modal.showModal();
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').close();
+        }
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         async function simulateReview() {
             const btn = document.querySelector('.btn-primary');
             btn.disabled = true;
@@ -145,21 +232,51 @@ app.get('/dashboard', (_req, res) => {
 
 // Debug endpoint to simulate a review
 app.post('/api/debug/simulate', (_req, res) => {
-  // Access private history through any means or add a public method
-  // For now, I'll add a mock entry directly if I had access, but 
-  // better to use the orchestrator instance.
-  
-  // We'll use a hacky way since history is private, or better, 
-  // I should have made a method in the service.
-  // I will add a 'addMockRecord' method to OrchestratorService.
+  const mockIssues = [
+    {
+      id: "SEC-001",
+      type: "security",
+      severity: "critical",
+      message: "Potential SQL Injection identified in query construction.",
+      suggestion: "Use parameterized queries instead of string concatenation.",
+      location: { file: "src/database.go", start_line: 42 }
+    },
+    {
+      id: "CQ-005",
+      type: "quality",
+      severity: "warning",
+      message: "Function complexity is too high (cyclomatic complexity > 10).",
+      suggestion: "Refactor the function into smaller, more manageable pieces.",
+      location: { file: "src/utils.py", start_line: 15 }
+    }
+  ];
+
+  const mockResult = {
+    total_issues: 2,
+    duration: 1.5,
+    files: [
+      {
+        file: "src/database.go",
+        response: { issues: [mockIssues[0]] },
+        cached: false
+      },
+      {
+        file: "src/utils.py",
+        response: { issues: [mockIssues[1]] },
+        cached: true
+      }
+    ]
+  };
+
   (orchestratorService as any).history.push({
     timestamp: new Date().toISOString(),
     repo: 'JNZader/ai-toolkit',
     pr: Math.floor(Math.random() * 100) + 1,
     commit: Math.random().toString(36).substring(7),
-    issues: Math.floor(Math.random() * 5),
-    duration: (Math.random() * 5).toFixed(2),
-    status: 'success'
+    issues: 2,
+    duration: 1.5,
+    status: 'success',
+    details: mockResult
   });
   
   res.json({ status: 'ok' });
