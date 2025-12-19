@@ -32,8 +32,8 @@ func (f *Factory) Create() (Provider, error) {
 		return NewOllamaProvider(f.config)
 	// case ProviderClaude:
 	// 	return NewClaudeProvider(f.config)
-	// case ProviderOpenAI:
-	// 	return NewOpenAIProvider(f.config)
+	case ProviderOpenAI:
+		return NewOpenAIProvider(f.config)
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", f.config.Name)
 	}
@@ -46,8 +46,8 @@ func (f *Factory) CreateByName(name string, cfg *config.ProviderConfig) (Provide
 		return NewOllamaProvider(cfg)
 	// case ProviderClaude:
 	// 	return NewClaudeProvider(cfg)
-	// case ProviderOpenAI:
-	// 	return NewOpenAIProvider(cfg)
+	case ProviderOpenAI:
+		return NewOpenAIProvider(cfg)
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", name)
 	}
