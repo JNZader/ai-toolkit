@@ -2,6 +2,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import { Webhooks, createNodeMiddleware } from '@octokit/webhooks';
 import { config } from './config.js';
 import { logger } from './logger.js';
+import { orchestratorService } from './services/orchestrator.service.js';
 
 const app: Express = express();
 
@@ -38,20 +39,30 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 // Event listeners
-webhooks.on('pull_request.opened', async ({ payload }) => {
-  logger.info({ 
-    repo: payload.repository.full_name,
-    pr: payload.pull_request.number,
-    action: 'opened' 
-  }, 'PR Opened');
-});
+webhooks.on(['pull_request.opened', 'pull_request.synchronize'], async ({ payload }) => {
+  const { repository, pull_request, installation } = payload;
+  
+  if (!installation) {
+    logger.warn('No installation ID found in payload');
+    return;
+  }
 
-webhooks.on('pull_request.synchronize', async ({ payload }) => {
   logger.info({ 
-    repo: payload.repository.full_name,
-    pr: payload.pull_request.number,
-    action: 'synchronize' 
-  }, 'PR Synchronized');
+    repo: repository.full_name,
+    pr: pull_request.number,
+    action: payload.action 
+  }, 'Triggering review orchestration');
+
+  // Trigger async review (fire and forget for webhook response speed)
+  orchestratorService.handlePullRequest(
+    installation.id,
+    repository.owner.login,
+    repository.name,
+    pull_request.number,
+    pull_request.head.sha
+  ).catch(err => {
+    logger.error({ err }, 'Orchestration error (async)');
+  });
 });
 
 // Iniciar servidor
