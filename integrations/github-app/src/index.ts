@@ -1,28 +1,67 @@
-import express, { Express } from 'express';
-import pino from 'pino';
-
-const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-});
+import express, { Express, Request, Response, NextFunction } from 'express';
+import { Webhooks, createNodeMiddleware } from '@octokit/webhooks';
+import { config } from './config.js';
+import { logger } from './logger.js';
 
 const app: Express = express();
-const port = process.env.PORT || 3000;
 
-app.use(express.json());
+// Inicializar Webhooks handler
+const webhooks = new Webhooks({
+  secret: config.GITHUB_WEBHOOK_SECRET,
+});
 
-// Health check endpoint
+// Middleware para loggear requests
+app.use((req, _res, next) => {
+  if (req.path !== '/health') {
+    logger.info({ method: req.method, path: req.path }, 'Incoming request');
+  }
+  next();
+});
+
+// GitHub Webhooks Endpoint
+// createNodeMiddleware maneja la verificacion de firma automaticamente
+app.use('/api/github/webhooks', createNodeMiddleware(webhooks, { path: '/' }));
+
+// Health check
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    env: config.NODE_ENV,
+    timestamp: new Date().toISOString() 
+  });
 });
 
-// Webhook endpoint (placeholder)
-app.post('/webhook', (req, res) => {
-  logger.info({ event: req.headers['x-github-event'] }, 'Webhook received');
-  res.status(200).send('OK');
+// Error handling
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error(err, 'Unhandled error');
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-app.listen(port, () => {
-  logger.info({ port }, 'GitHub App server started');
+// Event listeners
+webhooks.on('pull_request.opened', async ({ payload }) => {
+  logger.info({ 
+    repo: payload.repository.full_name,
+    pr: payload.pull_request.number,
+    action: 'opened' 
+  }, 'PR Opened');
 });
 
-export { app };
+webhooks.on('pull_request.synchronize', async ({ payload }) => {
+  logger.info({ 
+    repo: payload.repository.full_name,
+    pr: payload.pull_request.number,
+    action: 'synchronize' 
+  }, 'PR Synchronized');
+});
+
+// Iniciar servidor
+if (require.main === module) {
+  app.listen(config.PORT, () => {
+    logger.info(
+      { port: config.PORT, env: config.NODE_ENV },
+      'GitHub App server started'
+    );
+  });
+}
+
+export { app, webhooks };
