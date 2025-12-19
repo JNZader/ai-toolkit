@@ -18,7 +18,8 @@
       "Bash(go list:*)",
       "Bash(go install:*)",
       "Bash(govulncheck:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(go vet:*)"
     ]
   }
 }

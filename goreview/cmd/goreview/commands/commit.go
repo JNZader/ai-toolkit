@@ -158,11 +158,6 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		fmt.Println("📄 Reporte detallado guardado en logs/last_successful_review.md")
 
 		// 6. Actualizar el hash para que el hook sepa que ya revisamos esto
-		// Buscamos la raiz del repo
-		rootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
-		rootPathBytes, _ := rootCmd.Output()
-		rootPath := strings.TrimSpace(string(rootPathBytes))
-		
 		if rootPath != "" {
 			// Calculate hash using native Go (avoid shell command injection)
 			diffCmd := exec.Command("git", "diff", "--cached")
