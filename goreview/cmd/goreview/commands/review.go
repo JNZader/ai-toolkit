@@ -3,11 +3,14 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/JNZader/ai-toolkit/goreview/internal/cache"
 	"github.com/JNZader/ai-toolkit/goreview/internal/git"
 	"github.com/JNZader/ai-toolkit/goreview/internal/providers"
+	"github.com/JNZader/ai-toolkit/goreview/internal/report"
 	"github.com/JNZader/ai-toolkit/goreview/internal/review"
 	"github.com/JNZader/ai-toolkit/goreview/internal/rules"
 )
@@ -110,33 +113,25 @@ func runReview(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// 4. Mostrar resultados (Simple text report por ahora)
-	fmt.Printf("\nReview Complete in %s\n", result.Duration)
-	fmt.Printf("Total Issues: %d\n", result.TotalIssues)
-	
-	for _, file := range result.Files {
-		if file.Error != nil {
-			fmt.Printf("  [!] %s: Error: %v\n", file.File, file.Error)
-			continue
+	// 4. Generar reporte
+	rep := report.NewReporter(cfg.Output.Format)
+	if rep == nil {
+		return fmt.Errorf("unsupported output format: %s", cfg.Output.Format)
+	}
+
+	var output io.Writer = os.Stdout
+	if cfg.Output.File != "" {
+		f, err := os.Create(cfg.Output.File)
+		if err != nil {
+			return fmt.Errorf("failed to create output file: %w", err)
 		}
-		
-		status := "Analyzed"
-		if file.Cached {
-			status = "Cached"
-		}
-		
-		issuesCount := 0
-		if file.Response != nil {
-			issuesCount = len(file.Response.Issues)
-		}
-		
-		fmt.Printf("  [%s] %s: %d issues\n", status, file.File, issuesCount)
-		
-		if file.Response != nil {
-			for _, issue := range file.Response.Issues {
-				fmt.Printf("    - [%s] %s: %s\n", issue.Severity, issue.Type, issue.Message)
-			}
-		}
+		defer f.Close()
+		output = f
+		fmt.Printf("Writing report to %s\n", cfg.Output.File)
+	}
+
+	if err := rep.Generate(result, output); err != nil {
+		return fmt.Errorf("failed to generate report: %w", err)
 	}
 
 	return nil
