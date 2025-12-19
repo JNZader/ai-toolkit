@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { githubService } from './github.service.js';
 import { goreviewService } from './goreview.service.js';
+import { checksService } from './checks.service.js';
 import { logger } from '../logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,28 +16,35 @@ export class OrchestratorService {
     commitSha: string
   ): Promise<void> {
     const workDir = path.join(process.cwd(), 'tmp', `${owner}-${repo}-${pullNumber}`);
-    
+    let checkRunId: number | undefined;
+    let octokit: Octokit;
+
     try {
       logger.info({ owner, repo, pullNumber }, 'Starting review orchestration');
 
       // 1. Authenticate
-      const octokit = await githubService.getInstallationClient(installationId);
+      octokit = await githubService.getInstallationClient(installationId);
 
-      // 2. Get changed files
+      // 2. Create Check Run
+      checkRunId = await checksService.createCheckRun(octokit, owner, repo, commitSha);
+
+      // 3. Get changed files
       const files = await githubService.getChangedFiles(octokit, owner, repo, pullNumber);
       if (files.length === 0) {
         logger.info('No files changed, skipping review');
+        await checksService.updateCheckRun(octokit, owner, repo, checkRunId, { total_issues: 0, duration: 0, files: [] });
         return;
       }
 
-      // 3. Clone/Checkout code (Simplified: git clone)
-      // In production, you'd use a more robust caching/cloning strategy
+      // 4. Clone/Checkout code
       await this.prepareWorkspace(workDir, owner, repo, commitSha, octokit);
 
-      // 4. Run GoReview
+      // 5. Run GoReview
       const result = await goreviewService.runReview(files, workDir);
 
-      // 5. Report results (Log for now, later Checks API)
+      // 6. Report results to GitHub Checks
+      await checksService.updateCheckRun(octokit, owner, repo, checkRunId, result);
+
       logger.info(
         { 
           totalIssues: result.total_issues,
@@ -45,15 +53,19 @@ export class OrchestratorService {
         'Review completed'
       );
 
-      // Log details
-      for (const file of result.files) {
-        if (file.response && file.response.issues.length > 0) {
-          logger.info({ file: file.file, issues: file.response.issues }, 'Issues found');
-        }
-      }
-
     } catch (error) {
       logger.error({ error, owner, repo, pullNumber }, 'Orchestration failed');
+      
+      // Update check run with failure if it exists
+      if (checkRunId && octokit!) {
+        try {
+          await octokit.checks.update({
+            owner, repo, check_run_id: checkRunId,
+            status: 'completed', conclusion: 'failure',
+            output: { title: 'Analysis Failed', summary: 'An internal error occurred during analysis.' }
+          });
+        } catch (e) { /* ignore */ }
+      }
     } finally {
       // Cleanup
       try {
