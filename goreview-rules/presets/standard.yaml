@@ -1,0 +1,8 @@
+---
+preset: standard
+description: "Recommended rules for daily development"
+rules:
+  - rules/base.yaml
+  - rules/security.yaml
+  - languages/go.yaml
+  - languages/python.yaml

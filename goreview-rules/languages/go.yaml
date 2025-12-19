@@ -1,0 +1,30 @@
+---
+rules:
+  - id: GO-001
+    description: "Goroutine without error handling"
+    severity: error
+    category: concurrency
+    languages: ["go"]
+    prompt_context: >
+      Identify goroutines that are started without a
+      mechanism to catch or report errors (like errgroup
+      or a channel).
+
+  - id: GO-002
+    description: "Unclosed resource (defer)"
+    severity: warning
+    category: resource-management
+    languages: ["go"]
+    prompt_context: >
+      Check for files, database connections, or network
+      connections that are opened but not closed using
+      'defer'.
+
+  - id: GO-003
+    description: "Inefficient string concatenation"
+    severity: info
+    category: performance
+    languages: ["go"]
+    prompt_context: >
+      Identify loops where strings are concatenated using
+      '+' instead of strings.Builder.

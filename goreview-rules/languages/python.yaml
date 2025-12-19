@@ -1,0 +1,27 @@
+---
+rules:
+  - id: PY-001
+    description: "Mutable default arguments"
+    severity: error
+    category: correctness
+    languages: ["python"]
+    prompt_context: >
+      Identify functions using mutable objects (like lists
+      or dicts) as default arguments.
+
+  - id: PY-002
+    description: "Unused imports"
+    severity: info
+    category: maintenance
+    languages: ["python"]
+    prompt_context: >
+      Check for imports that are not used in the file.
+
+  - id: PY-003
+    description: "Usage of eval/exec"
+    severity: critical
+    category: security
+    languages: ["python"]
+    prompt_context: >
+      Identify usage of 'eval()' or 'exec()' which can
+      lead to code injection.
