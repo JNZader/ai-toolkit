@@ -58,7 +58,8 @@ export class GitHubService {
   }
 
   /**
-   * Get changed files in a PR
+   * Get changed files in a PR with pagination support
+   * PERF-005: Handles PRs with more than 100 files
    */
   async getChangedFiles(
     octokit: Octokit,
@@ -67,13 +68,33 @@ export class GitHubService {
     pullNumber: number
   ): Promise<string[]> {
     try {
-      const { data } = await octokit.pulls.listFiles({
-        owner,
-        repo,
-        pull_number: pullNumber,
-        per_page: 100, // Handle pagination for large PRs in future
-      });
-      return data.map((f) => f.filename);
+      const files: string[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data } = await octokit.pulls.listFiles({
+          owner,
+          repo,
+          pull_number: pullNumber,
+          per_page: 100,
+          page,
+        });
+
+        files.push(...data.map((f) => f.filename));
+
+        // If we got less than 100 files, we've reached the end
+        hasMore = data.length === 100;
+        page++;
+
+        // Safety limit to prevent infinite loops (max 3000 files)
+        if (page > 30) {
+          logger.warn({ owner, repo, pullNumber, totalFiles: files.length }, 'Reached file limit for PR');
+          break;
+        }
+      }
+
+      return files;
     } catch (error) {
       logger.error({ error, owner, repo, pullNumber }, 'Failed to get changed files');
       throw error;

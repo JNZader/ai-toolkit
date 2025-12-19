@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm test:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(cat:*)",
+      "Bash(npm audit:*)",
+      "Bash(pnpm test:coverage:*)",
+      "Bash(if [ -f .env ])",
+      "Bash(then echo \"WARNING: .env file exists\")",
+      "Bash(else echo \"No .env file found\")",
+      "Bash(fi:*)",
+      "Bash(go test:*)",
+      "Bash(pnpm add:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)"
+    ]
+  }
+}

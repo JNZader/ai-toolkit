@@ -48,6 +48,9 @@ type ProviderConfig struct {
 
 	// Temperature (0.0 - 1.0)
 	Temperature float64 `yaml:"temperature" mapstructure:"temperature"`
+
+	// PERF-002: Rate limit in requests per second (0 = unlimited)
+	RateLimitRPS int `yaml:"rate_limit_rps" mapstructure:"rate_limit_rps"`
 }
 
 // GitConfig configura la integracion con Git
@@ -84,6 +87,9 @@ type ReviewConfig struct {
 
 	// Contexto adicional para el review
 	Context string `yaml:"context" mapstructure:"context"`
+
+	// PERF-003: Maximum concurrent LLM requests (0 = auto based on CPU)
+	MaxConcurrency int `yaml:"max_concurrency" mapstructure:"max_concurrency"`
 }
 
 // OutputConfig configura la salida

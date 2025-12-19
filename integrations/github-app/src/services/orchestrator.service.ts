@@ -7,6 +7,27 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { simpleGit } from 'simple-git';
 
+/**
+ * Sanitizes a path component to prevent path traversal attacks.
+ * Only allows alphanumeric characters, hyphens, and underscores.
+ */
+function sanitizePath(input: string): string {
+  return input.replace(/[^a-zA-Z0-9\-_]/g, '_');
+}
+
+/**
+ * Validates that a resolved path stays within the expected base directory.
+ * Prevents path traversal attacks.
+ */
+function validatePathWithinBase(resolvedPath: string, baseDir: string): void {
+  const normalizedResolved = path.resolve(resolvedPath);
+  const normalizedBase = path.resolve(baseDir);
+
+  if (!normalizedResolved.startsWith(normalizedBase)) {
+    throw new Error('Path traversal attempt detected');
+  }
+}
+
 export interface ReviewRecord {
   timestamp: string;
   repo: string;
@@ -32,7 +53,14 @@ export class OrchestratorService {
     pullNumber: number,
     commitSha: string
   ): Promise<void> {
-    const workDir = path.join(process.cwd(), 'tmp', `${owner}-${repo}-${pullNumber}`);
+    // Sanitize path components to prevent path traversal
+    const safeOwner = sanitizePath(owner);
+    const safeRepo = sanitizePath(repo);
+    const baseDir = path.join(process.cwd(), 'tmp');
+    const workDir = path.join(baseDir, `${safeOwner}-${safeRepo}-${pullNumber}`);
+
+    // Validate the path stays within the base directory
+    validatePathWithinBase(workDir, baseDir);
     let checkRunId: number | undefined;
     let octokit: Octokit;
     let reviewStatus: 'success' | 'failure' = 'failure'; // Default to failure until proven success
@@ -89,7 +117,9 @@ export class OrchestratorService {
             status: 'completed', conclusion: 'failure',
             output: { title: 'Analysis Failed', summary: 'An internal error occurred during analysis.' }
           });
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          logger.warn({ error: e, checkRunId }, 'Failed to update check run status after error');
+        }
       }
     } finally {
       // Record history
@@ -126,13 +156,29 @@ export class OrchestratorService {
 
     // Get auth token
     const { token } = await (octokit.auth({ type: 'installation' }) as Promise<{ token: string }>);
-    const remote = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+
+    // Use HTTPS URL without embedded token (more secure)
+    const repoUrl = `https://github.com/${owner}/${repo}.git`;
 
     const git = simpleGit(workDir);
     await git.init();
-    await git.addRemote('origin', remote);
-    await git.fetch('origin', sha);
+
+    // Configure credential helper to use token without exposing it in remote URL
+    // This prevents token from appearing in logs, error messages, or .git/config
+    await git.addConfig('credential.helper', '');
+    await git.addConfig(
+      `url.https://x-access-token:${token}@github.com/.insteadOf`,
+      'https://github.com/'
+    );
+
+    await git.addRemote('origin', repoUrl);
+
+    // PERF-001: Use shallow clone for better performance
+    await git.fetch('origin', sha, ['--depth=1']);
     await git.checkout(sha);
+
+    // Clean up the credential config after checkout to avoid token persistence
+    await git.raw(['config', '--unset', `url.https://x-access-token:${token}@github.com/.insteadOf`]);
   }
 }
 

@@ -3,6 +3,8 @@ package commands
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -143,12 +145,14 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		rootPath := strings.TrimSpace(string(rootPathBytes))
 		
 		if rootPath != "" {
-			// Calcular hash (mismo que en el hook)
-			hashCmd := exec.Command("sh", "-c", "git diff --cached | sha256sum | awk '{print $1}'")
-			hashBytes, _ := hashCmd.Output()
-			hash := strings.TrimSpace(string(hashBytes))
-			
-			if hash != "" {
+			// Calculate hash using native Go (avoid shell command injection)
+			diffCmd := exec.Command("git", "diff", "--cached")
+			diffCmd.Dir = rootPath
+			diffOutput, err := diffCmd.Output()
+			if err == nil && len(diffOutput) > 0 {
+				hashBytes := sha256.Sum256(diffOutput)
+				hash := hex.EncodeToString(hashBytes[:])
+
 				dotGoreview := filepath.Join(rootPath, ".goreview")
 				_ = os.MkdirAll(dotGoreview, 0755)
 				_ = os.WriteFile(filepath.Join(dotGoreview, "last_reviewed_hash"), []byte(hash), 0644)

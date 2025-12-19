@@ -3,6 +3,7 @@ package review
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +13,12 @@ import (
 	"github.com/JNZader/ai-toolkit/goreview/internal/git"
 	"github.com/JNZader/ai-toolkit/goreview/internal/providers"
 	"github.com/JNZader/ai-toolkit/goreview/internal/rules"
+)
+
+// CODE-004: Constants for previously hardcoded values
+const (
+	// DefaultMaxConcurrency is the default number of concurrent LLM requests
+	DefaultMaxConcurrency = 5
 )
 
 // Engine orquesta el proceso de code review
@@ -40,6 +47,28 @@ func NewEngine(
 	}
 }
 
+// PERF-003: calculateOptimalConcurrency determines the number of concurrent requests
+func (e *Engine) calculateOptimalConcurrency() int {
+	// If configured, use that value
+	if e.cfg.Review.MaxConcurrency > 0 {
+		return e.cfg.Review.MaxConcurrency
+	}
+
+	// Auto-calculate based on CPU cores (2x cores is a good default for I/O bound work)
+	cpuCores := runtime.NumCPU()
+	optimal := cpuCores * 2
+
+	// Cap at a reasonable maximum to avoid overwhelming the LLM
+	if optimal > 10 {
+		optimal = 10
+	}
+	if optimal < 1 {
+		optimal = 1
+	}
+
+	return optimal
+}
+
 // Run ejecuta el review
 func (e *Engine) Run(ctx context.Context) (*Result, error) {
 	// 1. Obtener diff segun el modo configurado
@@ -55,7 +84,9 @@ func (e *Engine) Run(ctx context.Context) (*Result, error) {
 	// 2. Procesar archivos (paralelizable)
 	var wg sync.WaitGroup
 	resultsChan := make(chan *FileResult, len(diff.Files))
-	semaphore := make(chan struct{}, 5) // Max 5 concurrencia para no saturar LLM local
+	// PERF-003: Use configurable concurrency instead of hardcoded value
+	concurrency := e.calculateOptimalConcurrency()
+	semaphore := make(chan struct{}, concurrency)
 
 	start := time.Now()
 

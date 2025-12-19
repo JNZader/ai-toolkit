@@ -8,10 +8,84 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/JNZader/ai-toolkit/goreview/internal/config"
 )
+
+// RateLimiter implements a token bucket rate limiter
+type RateLimiter struct {
+	tokens   chan struct{}
+	interval time.Duration
+	stopCh   chan struct{}
+	mu       sync.Mutex
+	started  bool
+}
+
+// NewRateLimiter creates a rate limiter with the specified requests per second
+func NewRateLimiter(rps int) *RateLimiter {
+	if rps <= 0 {
+		return nil // No rate limiting
+	}
+
+	rl := &RateLimiter{
+		tokens:   make(chan struct{}, rps),
+		interval: time.Second / time.Duration(rps),
+		stopCh:   make(chan struct{}),
+	}
+
+	// Pre-fill tokens
+	for i := 0; i < rps; i++ {
+		rl.tokens <- struct{}{}
+	}
+
+	// Start refill goroutine
+	go rl.refill()
+	rl.started = true
+
+	return rl
+}
+
+// refill periodically adds tokens back to the bucket
+func (rl *RateLimiter) refill() {
+	ticker := time.NewTicker(rl.interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-rl.stopCh:
+			return
+		case <-ticker.C:
+			select {
+			case rl.tokens <- struct{}{}:
+			default:
+				// Bucket full, discard token
+			}
+		}
+	}
+}
+
+// Wait blocks until a token is available or context is cancelled
+func (rl *RateLimiter) Wait(ctx context.Context) error {
+	if rl == nil {
+		return nil // No rate limiting
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-rl.tokens:
+		return nil
+	}
+}
+
+// Close stops the rate limiter
+func (rl *RateLimiter) Close() {
+	if rl != nil && rl.started {
+		close(rl.stopCh)
+	}
+}
 
 // OllamaProvider implementa Provider para Ollama
 type OllamaProvider struct {
@@ -21,6 +95,7 @@ type OllamaProvider struct {
 	maxTokens   int
 	temperature float64
 	client      *http.Client
+	rateLimiter *RateLimiter
 }
 
 // ollamaRequest estructura de request para Ollama
@@ -61,6 +136,12 @@ func NewOllamaProvider(cfg *config.ProviderConfig) (*OllamaProvider, error) {
 		timeout = 5 * time.Minute
 	}
 
+	// PERF-002: Create rate limiter if configured
+	var rateLimiter *RateLimiter
+	if cfg.RateLimitRPS > 0 {
+		rateLimiter = NewRateLimiter(cfg.RateLimitRPS)
+	}
+
 	return &OllamaProvider{
 		baseURL:     strings.TrimSuffix(baseURL, "/"),
 		model:       model,
@@ -70,6 +151,7 @@ func NewOllamaProvider(cfg *config.ProviderConfig) (*OllamaProvider, error) {
 		client: &http.Client{
 			Timeout: timeout,
 		},
+		rateLimiter: rateLimiter,
 	}, nil
 }
 
@@ -80,6 +162,11 @@ func (p *OllamaProvider) Name() string {
 
 // Review realiza un code review
 func (p *OllamaProvider) Review(ctx context.Context, request *ReviewRequest) (*ReviewResponse, error) {
+	// PERF-002: Wait for rate limiter before making request
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limiter wait cancelled: %w", err)
+	}
+
 	prompt := p.buildPrompt(request)
 
 	reqBody := ollamaRequest{
@@ -265,8 +352,12 @@ func (p *OllamaProvider) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-// Close cierra conexiones (no-op para http client)
+// Close cierra conexiones y limpia recursos
 func (p *OllamaProvider) Close() error {
+	// PERF-002: Clean up rate limiter
+	if p.rateLimiter != nil {
+		p.rateLimiter.Close()
+	}
 	return nil
 }
 

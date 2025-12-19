@@ -1,6 +1,31 @@
 import { spawn } from 'child_process';
 import { logger } from '../logger.js';
 
+/**
+ * Sanitizes a filename to prevent command injection attacks.
+ * Only allows alphanumeric characters, underscores, hyphens, dots, and forward slashes.
+ * @throws Error if filename contains invalid characters
+ */
+function sanitizeFilename(filename: string): string {
+  // Allow only safe characters: alphanumeric, underscore, hyphen, dot, forward slash
+  // This prevents shell metacharacters and path traversal attempts
+  if (!/^[\w\-./]+$/.test(filename)) {
+    throw new Error(`Invalid filename contains dangerous characters: ${filename}`);
+  }
+
+  // Prevent path traversal
+  if (filename.includes('..')) {
+    throw new Error(`Path traversal attempt detected: ${filename}`);
+  }
+
+  // Prevent absolute paths
+  if (filename.startsWith('/') || /^[a-zA-Z]:/.test(filename)) {
+    throw new Error(`Absolute path not allowed: ${filename}`);
+  }
+
+  return filename;
+}
+
 export interface GoReviewResult {
   total_issues: number;
   duration: number;
@@ -36,9 +61,24 @@ export class GoReviewService {
         return resolve({ total_issues: 0, duration: 0, files: [] });
       }
 
+      // Sanitize all filenames to prevent command injection
+      const sanitizedFiles = files.map(f => {
+        try {
+          return sanitizeFilename(f);
+        } catch (error) {
+          logger.warn({ file: f, error }, 'Skipping file with invalid name');
+          return null;
+        }
+      }).filter((f): f is string => f !== null);
+
+      if (sanitizedFiles.length === 0) {
+        logger.warn('All files were filtered out due to invalid names');
+        return resolve({ total_issues: 0, duration: 0, files: [] });
+      }
+
       // Construct command: goreview review file1 file2 ... --format json
-      const args = ['review', ...files, '--format', 'json'];
-      
+      const args = ['review', ...sanitizedFiles, '--format', 'json'];
+
       const child = spawn('goreview', args, {
         cwd: workDir,
         env: { ...process.env }, // Pass environment variables

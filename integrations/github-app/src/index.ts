@@ -1,16 +1,81 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import { Webhooks, createNodeMiddleware } from '@octokit/webhooks';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { orchestratorService } from './services/orchestrator.service.js';
 import { docsService } from './services/docs.service.js';
 import { githubService } from './services/github.service.js';
 
+// Webhook payload validation schemas
+const pullRequestPayloadSchema = z.object({
+  repository: z.object({
+    owner: z.object({ login: z.string() }),
+    name: z.string(),
+    full_name: z.string(),
+  }),
+  pull_request: z.object({
+    number: z.number(),
+    head: z.object({ sha: z.string() }),
+  }),
+  installation: z.object({ id: z.number() }).optional(),
+  action: z.string(),
+});
+
+const pushPayloadSchema = z.object({
+  repository: z.object({
+    owner: z.object({ login: z.string() }).nullable(),
+    name: z.string(),
+    full_name: z.string(),
+  }),
+  ref: z.string(),
+  commits: z.array(z.any()),
+  installation: z.object({ id: z.number() }).optional(),
+});
+
+/**
+ * Escapes HTML entities to prevent XSS attacks.
+ */
+function escapeHtml(unsafe: string | number | undefined | null): string {
+  if (unsafe === undefined || unsafe === null) return '';
+  const str = String(unsafe);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 const app: Express = express();
+
+// SEC-010: Security headers with helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for inline scripts in dashboard
+      styleSrc: ["'self'", "'unsafe-inline'"], // Needed for inline styles in dashboard
+      imgSrc: ["'self'", "data:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
 // Inicializar Webhooks handler
 const webhooks = new Webhooks({
   secret: config.GITHUB_WEBHOOK_SECRET,
+});
+
+// SEC-006: Rate limiting for webhooks
+const webhookLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // Limit each IP to 30 requests per minute
+  message: { error: 'Too many webhook requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Middleware para loggear requests
@@ -21,9 +86,9 @@ app.use((req, _res, next) => {
   next();
 });
 
-// GitHub Webhooks Endpoint
+// GitHub Webhooks Endpoint with rate limiting
 // createNodeMiddleware maneja la verificacion de firma automaticamente
-app.use('/api/github/webhooks', createNodeMiddleware(webhooks, { path: '/' }));
+app.use('/api/github/webhooks', webhookLimiter, createNodeMiddleware(webhooks, { path: '/' }));
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -38,15 +103,16 @@ app.get('/health', (_req, res) => {
 app.get('/dashboard', (_req, res) => {
   const history = orchestratorService.getHistory();
   
+  // SEC-007: XSS prevention - escape all user-controlled data
   const historyRows = history.map((h, index) => `
     <tr>
-        <td>${new Date(h.timestamp).toLocaleTimeString()}</td>
-        <td>${h.repo}</td>
-        <td>#${h.pr}</td>
-        <td><code>${h.commit}</code></td>
-        <td><strong>${h.issues}</strong></td>
-        <td>${h.duration}s</td>
-        <td><span class="status ${h.status === 'success' ? 'ok' : 'error'}">${h.status.toUpperCase()}</span></td>
+        <td>${escapeHtml(new Date(h.timestamp).toLocaleTimeString())}</td>
+        <td>${escapeHtml(h.repo)}</td>
+        <td>#${escapeHtml(h.pr)}</td>
+        <td><code>${escapeHtml(h.commit)}</code></td>
+        <td><strong>${escapeHtml(h.issues)}</strong></td>
+        <td>${escapeHtml(h.duration)}s</td>
+        <td><span class="status ${h.status === 'success' ? 'ok' : 'error'}">${escapeHtml(h.status.toUpperCase())}</span></td>
         <td><button onclick="showDetails(${index})" class="btn btn-sm">View Details</button></td>
     </tr>
   `).join('');
@@ -232,57 +298,60 @@ app.get('/dashboard', (_req, res) => {
   res.send(html);
 });
 
-// Debug endpoint to simulate a review
-app.post('/api/debug/simulate', (_req, res) => {
-  const mockIssues = [
-    {
-      id: "SEC-001",
-      type: "security",
-      severity: "critical",
-      message: "Potential SQL Injection identified in query construction.",
-      suggestion: "Use parameterized queries instead of string concatenation.",
-      location: { file: "src/database.go", start_line: 42 }
-    },
-    {
-      id: "CQ-005",
-      type: "quality",
-      severity: "warning",
-      message: "Function complexity is too high (cyclomatic complexity > 10).",
-      suggestion: "Refactor the function into smaller, more manageable pieces.",
-      location: { file: "src/utils.py", start_line: 15 }
-    }
-  ];
-
-  const mockResult = {
-    total_issues: 2,
-    duration: 1.5,
-    files: [
+// SEC-009: Debug endpoint disabled in production
+if (config.NODE_ENV !== 'production') {
+  // Debug endpoint to simulate a review (only available in development)
+  app.post('/api/debug/simulate', (_req, res) => {
+    const mockIssues = [
       {
-        file: "src/database.go",
-        response: { issues: [mockIssues[0]] },
-        cached: false
+        id: "SEC-001",
+        type: "security",
+        severity: "critical",
+        message: "Potential SQL Injection identified in query construction.",
+        suggestion: "Use parameterized queries instead of string concatenation.",
+        location: { file: "src/database.go", start_line: 42 }
       },
       {
-        file: "src/utils.py",
-        response: { issues: [mockIssues[1]] },
-        cached: true
+        id: "CQ-005",
+        type: "quality",
+        severity: "warning",
+        message: "Function complexity is too high (cyclomatic complexity > 10).",
+        suggestion: "Refactor the function into smaller, more manageable pieces.",
+        location: { file: "src/utils.py", start_line: 15 }
       }
-    ]
-  };
+    ];
 
-  (orchestratorService as any).history.push({
-    timestamp: new Date().toISOString(),
-    repo: 'JNZader/ai-toolkit',
-    pr: Math.floor(Math.random() * 100) + 1,
-    commit: Math.random().toString(36).substring(7),
-    issues: 2,
-    duration: 1.5,
-    status: 'success',
-    details: mockResult
+    const mockResult = {
+      total_issues: 2,
+      duration: 1.5,
+      files: [
+        {
+          file: "src/database.go",
+          response: { issues: [mockIssues[0]] },
+          cached: false
+        },
+        {
+          file: "src/utils.py",
+          response: { issues: [mockIssues[1]] },
+          cached: true
+        }
+      ]
+    };
+
+    (orchestratorService as any).history.push({
+      timestamp: new Date().toISOString(),
+      repo: 'JNZader/ai-toolkit',
+      pr: Math.floor(Math.random() * 100) + 1,
+      commit: Math.random().toString(36).substring(7),
+      issues: 2,
+      duration: 1.5,
+      status: 'success',
+      details: mockResult
+    });
+
+    res.json({ status: 'ok' });
   });
-  
-  res.json({ status: 'ok' });
-});
+}
 
 // Error handling
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
@@ -290,19 +359,26 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Event listeners
+// Event listeners with SEC-008: Payload validation
 webhooks.on(['pull_request.opened', 'pull_request.synchronize'], async ({ payload }) => {
-  const { repository, pull_request, installation } = payload;
-  
+  // Validate webhook payload structure
+  const validated = pullRequestPayloadSchema.safeParse(payload);
+  if (!validated.success) {
+    logger.warn({ error: validated.error.issues }, 'Invalid pull_request webhook payload');
+    return;
+  }
+
+  const { repository, pull_request, installation, action } = validated.data;
+
   if (!installation) {
     logger.warn('No installation ID found in payload');
     return;
   }
 
-  logger.info({ 
+  logger.info({
     repo: repository.full_name,
     pr: pull_request.number,
-    action: payload.action 
+    action: action
   }, 'Triggering review orchestration');
 
   // Trigger async review (fire and forget for webhook response speed)
@@ -318,8 +394,15 @@ webhooks.on(['pull_request.opened', 'pull_request.synchronize'], async ({ payloa
 });
 
 webhooks.on('push', async ({ payload }) => {
-  const { repository, ref, commits, installation } = payload;
-  
+  // Validate webhook payload structure
+  const validated = pushPayloadSchema.safeParse(payload);
+  if (!validated.success) {
+    logger.warn({ error: validated.error.issues }, 'Invalid push webhook payload');
+    return;
+  }
+
+  const { repository, ref, commits, installation } = validated.data;
+
   if (!installation) return;
 
   // Only process pushes to main/develop branches to avoid noise
@@ -332,9 +415,9 @@ webhooks.on('push', async ({ payload }) => {
 
   // Trigger doc update
   docsService.handlePush(
-    octokit, 
-    repository.owner?.login || '', 
-    repository.name, 
+    octokit,
+    repository.owner?.login || '',
+    repository.name,
     ref,
     commits
   ).catch(err => logger.error(err, 'Docs update failed'));

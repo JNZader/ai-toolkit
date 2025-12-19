@@ -2,6 +2,9 @@ import { Octokit } from '@octokit/rest';
 import { logger } from '../logger.js';
 import { GoReviewResult } from './goreview.service.js';
 
+// CODE-004: Constants for GitHub API limits
+const GITHUB_MAX_ANNOTATIONS_PER_REQUEST = 50;
+
 export class ChecksService {
   /**
    * Create a new Check Run in "in_progress" state
@@ -45,10 +48,9 @@ export class ChecksService {
     try {
       const annotations = this.buildAnnotations(result);
       const conclusion = result.total_issues > 0 ? 'failure' : 'success';
-      
-      // GitHub API allows max 50 annotations per request
-      // We'll take the first 50 for now (pagination logic can be added later)
-      const batchAnnotations = annotations.slice(0, 50);
+
+      // CODE-004: Use constant for GitHub API limit
+      const batchAnnotations = annotations.slice(0, GITHUB_MAX_ANNOTATIONS_PER_REQUEST);
 
       await octokit.checks.update({
         owner,
