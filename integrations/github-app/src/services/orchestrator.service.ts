@@ -7,7 +7,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { simpleGit } from 'simple-git';
 
+export interface ReviewRecord {
+  timestamp: string;
+  repo: string;
+  pr: number;
+  commit: string;
+  issues: number;
+  duration: number;
+  status: 'success' | 'failure';
+}
+
 export class OrchestratorService {
+  private history: ReviewRecord[] = [];
+
+  getHistory(): ReviewRecord[] {
+    return this.history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
   async handlePullRequest(
     installationId: number,
     owner: string,
@@ -18,6 +34,9 @@ export class OrchestratorService {
     const workDir = path.join(process.cwd(), 'tmp', `${owner}-${repo}-${pullNumber}`);
     let checkRunId: number | undefined;
     let octokit: Octokit;
+    let reviewStatus: 'success' | 'failure' = 'failure'; // Default to failure until proven success
+    let totalIssues = 0;
+    let duration = 0;
 
     try {
       logger.info({ owner, repo, pullNumber }, 'Starting review orchestration');
@@ -41,9 +60,13 @@ export class OrchestratorService {
 
       // 5. Run GoReview
       const result = await goreviewService.runReview(files, workDir);
+      totalIssues = result.total_issues;
+      duration = result.duration;
 
       // 6. Report results to GitHub Checks
       await checksService.updateCheckRun(octokit, owner, repo, checkRunId, result);
+
+      reviewStatus = 'success';
 
       logger.info(
         { 
@@ -67,6 +90,17 @@ export class OrchestratorService {
         } catch (e) { /* ignore */ }
       }
     } finally {
+      // Record history
+      this.history.push({
+        timestamp: new Date().toISOString(),
+        repo: `${owner}/${repo}`,
+        pr: pullNumber,
+        commit: commitSha.substring(0, 7),
+        issues: totalIssues,
+        duration: duration,
+        status: reviewStatus
+      });
+
       // Cleanup
       try {
         fs.rmSync(workDir, { recursive: true, force: true });
