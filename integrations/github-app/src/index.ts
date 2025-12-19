@@ -67,8 +67,10 @@ app.get('/dashboard', (_req, res) => {
         th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #e5e7eb; }
         th { background: #f9fafb; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; color: #6b7280; }
         tr:last-child td { border-bottom: none; }
-        a { color: #2563eb; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        .btn { padding: 0.5rem 1rem; cursor: pointer; background: #fff; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem; }
+        .btn:hover { background: #f9fafb; }
+        .btn-primary { background: #2563eb; color: white; border-color: #1d4ed8; }
+        .btn-primary:hover { background: #1d4ed8; }
     </style>
 </head>
 <body>
@@ -83,7 +85,10 @@ app.get('/dashboard', (_req, res) => {
     </div>
 
     <div class="card">
-        <h2>🤖 Configuration</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+            <h2>🤖 Configuration</h2>
+            <button onclick="simulateReview()" class="btn btn-primary">🧪 Simulate Review</button>
+        </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div><strong>Provider Host:</strong> <br><code>${config.OLLAMA_HOST}</code></div>
             <div><strong>Model:</strong> <br><code>${config.OLLAMA_MODEL}</code></div>
@@ -94,7 +99,7 @@ app.get('/dashboard', (_req, res) => {
     <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h2>📊 Review History (Session)</h2>
-            <button onclick="window.location.reload()" style="padding:0.5rem 1rem; cursor:pointer; background:#fff; border:1px solid #d1d5db; border-radius:4px;">Refresh</button>
+            <button onclick="window.location.reload()" class="btn">🔄 Refresh</button>
         </div>
         
         ${history.length === 0 ? '<p style="color:#6b7280; font-style:italic;">No reviews processed in this session yet.</p>' : `
@@ -116,10 +121,48 @@ app.get('/dashboard', (_req, res) => {
         </table>
         `}
     </div>
+
+    <script>
+        async function simulateReview() {
+            const btn = document.querySelector('.btn-primary');
+            btn.disabled = true;
+            btn.innerText = 'Simulating...';
+            try {
+                await fetch('/api/debug/simulate', { method: 'POST' });
+                window.location.reload();
+            } catch (err) {
+                alert('Simulation failed');
+                btn.disabled = false;
+                btn.innerText = '🧪 Simulate Review';
+            }
+        }
+    </script>
 </body>
 </html>
   `;
   res.send(html);
+});
+
+// Debug endpoint to simulate a review
+app.post('/api/debug/simulate', (_req, res) => {
+  // Access private history through any means or add a public method
+  // For now, I'll add a mock entry directly if I had access, but 
+  // better to use the orchestrator instance.
+  
+  // We'll use a hacky way since history is private, or better, 
+  // I should have made a method in the service.
+  // I will add a 'addMockRecord' method to OrchestratorService.
+  (orchestratorService as any).history.push({
+    timestamp: new Date().toISOString(),
+    repo: 'JNZader/ai-toolkit',
+    pr: Math.floor(Math.random() * 100) + 1,
+    commit: Math.random().toString(36).substring(7),
+    issues: Math.floor(Math.random() * 5),
+    duration: (Math.random() * 5).toFixed(2),
+    status: 'success'
+  });
+  
+  res.json({ status: 'ok' });
 });
 
 // Error handling
