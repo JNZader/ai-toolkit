@@ -134,8 +134,8 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		gitCmd := exec.Command("git", "commit", "-m", msg, "--no-verify")
 		gitCmd.Stdout = os.Stdout
 		gitCmd.Stderr = os.Stderr
-		if err := gitCmd.Run(); err != nil {
-			return err
+		if runErr := gitCmd.Run(); runErr != nil {
+			return runErr
 		}
 
 		// Obtener la raiz del repo

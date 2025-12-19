@@ -1,0 +1,58 @@
+# GoReview Configuration
+
+provider:
+  name: ollama
+  model: devstral-small-2:latest
+  base_url: http://localhost:11434
+  timeout: 5m0s
+  max_tokens: 4096
+  temperature: 0.1
+  rate_limit_rps: 0
+
+git:
+  repo_path: .
+  base_branch: main
+  include_untracked: false
+  ignore_patterns:
+    - '*.md'
+    - '*.txt'
+    - '*.json'
+    - '*.yaml'
+    - '*.yml'
+    - go.sum
+    - package-lock.json
+    - pnpm-lock.yaml
+    - yarn.lock
+    - vendor/*
+    - node_modules/*
+    - .git/*
+
+review:
+  mode: staged
+  commit: ""
+  files: []
+  min_severity: warning
+  max_issues: 50
+  context: ""
+  max_concurrency: 0
+
+output:
+  format: markdown
+  file: ""
+  include_code: true
+  color: true
+  verbose: false
+
+cache:
+  enabled: true
+  dir: .cache/goreview
+  ttl: 24h0m0s
+  max_size_mb: 100
+
+rules:
+  preset: standard
+  files: []
+  disabled: []
+  enabled: []
+
+log_level: info
