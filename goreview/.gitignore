@@ -1,0 +1,16 @@
+# Binary
+goreview
+goreview.exe
+
+# Build directory
+build/
+
+# Test cache
+.cache/
+
+# Coverage
+coverage.out
+coverage.html
+
+# Local config
+config.local.yaml

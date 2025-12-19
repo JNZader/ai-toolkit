@@ -1,0 +1,60 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+build/
+out/
+bin/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Coverage
+coverage/
+*.cover
+*.coverage
+coverage.out
+coverage.html
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Secrets (NEVER commit these)
+*.pem
+*.key
+private-key.pem
+credentials.json
+secrets.yaml
