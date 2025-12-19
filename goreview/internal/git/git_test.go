@@ -20,8 +20,12 @@ func TestNewRepository(t *testing.T) {
 	}
 
 	// Configurar git
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@test.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test").Run()
+	if err := exec.Command("git", "-C", tmpDir, "config", "user.email", "test@test.com").Run(); err != nil {
+		t.Fatalf("failed to config git email: %v", err)
+	}
+	if err := exec.Command("git", "-C", tmpDir, "config", "user.name", "Test").Run(); err != nil {
+		t.Fatalf("failed to config git name: %v", err)
+	}
 
 	repo, err := NewRepository(tmpDir, nil)
 	if err != nil {
@@ -130,15 +134,21 @@ func TestStagedDiff(t *testing.T) {
 	for _, args := range cmds {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Dir = tmpDir
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("failed to run git command %v: %v", args, err)
+		}
 	}
 
 	// Crear archivo
 	testFile := filepath.Join(tmpDir, "test.go")
-	os.WriteFile(testFile, []byte("package main\n\nfunc main() {}\n"), 0644)
+	if err := os.WriteFile(testFile, []byte("package main\n\nfunc main() {}\n"), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
 
 	// Stage archivo
-	exec.Command("git", "-C", tmpDir, "add", "test.go").Run()
+	if err := exec.Command("git", "-C", tmpDir, "add", "test.go").Run(); err != nil {
+		t.Fatalf("failed to stage file: %v", err)
+	}
 
 	repo, _ := NewRepository(tmpDir, nil)
 	diff, err := repo.GetStagedDiff(context.Background())

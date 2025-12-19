@@ -28,9 +28,9 @@ func TestFileCache(t *testing.T) {
 	key := c.ComputeKey(req)
 
 	// Test Get empty
-	_, found, err := c.Get(key)
-	if err != nil {
-		t.Fatalf("Get failed: %v", err)
+	_, found, errGet := c.Get(key)
+	if errGet != nil {
+		t.Fatalf("Get failed: %v", errGet)
 	}
 	if found {
 		t.Error("expected not found")
@@ -45,9 +45,9 @@ func TestFileCache(t *testing.T) {
 	}
 
 	// Test Get found
-	cachedResp, found, err := c.Get(key)
-	if err != nil {
-		t.Fatalf("Get failed: %v", err)
+	cachedResp, found, errGet2 := c.Get(key)
+	if errGet2 != nil {
+		t.Fatalf("Get failed: %v", errGet2)
 	}
 	if !found {
 		t.Error("expected found")
@@ -65,9 +65,14 @@ func TestFileCache_TTL(t *testing.T) {
 		TTL:     1 * time.Nanosecond, // Expira inmediatamente
 	}
 
-	c, _ := NewFileCache(cfg)
+	c, err := NewFileCache(cfg)
+	if err != nil {
+		t.Fatalf("NewFileCache failed: %v", err)
+	}
 	key := "test-key"
-	c.Set(key, &providers.ReviewResponse{})
+	if err := c.Set(key, &providers.ReviewResponse{}); err != nil {
+		t.Fatalf("Set failed: %v", err)
+	}
 
 	time.Sleep(1 * time.Millisecond)
 
