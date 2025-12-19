@@ -68,9 +68,9 @@ func NewFileCache(cfg config.CacheConfig) (*FileCache, error) {
 		}
 	}
 
-	lruCache, err := lru.New[string, *cacheEntry](lruSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create LRU cache: %w", err)
+	lruCache, errLRU := lru.New[string, *cacheEntry](lruSize)
+	if errLRU != nil {
+		return nil, fmt.Errorf("failed to create LRU cache: %w", errLRU)
 	}
 
 	return &FileCache{
@@ -86,7 +86,6 @@ func (c *FileCache) Get(key string) (*providers.ReviewResponse, bool, error) {
 		return nil, false, nil
 	}
 
-	// PERF-004: Check in-memory LRU cache first
 	c.mu.RLock()
 	if entry, ok := c.lruCache.Get(key); ok {
 		c.mu.RUnlock()
