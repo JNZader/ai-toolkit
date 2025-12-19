@@ -1,0 +1,21 @@
+rules:
+  - id: SEC-001
+    description: "SQL Injection vulnerability"
+    severity: critical
+    category: security
+    languages: ["*"]
+    prompt_context: "Identify raw SQL queries constructed using string concatenation instead of prepared statements."
+
+  - id: SEC-002
+    description: "Insecure cryptography"
+    severity: error
+    category: security
+    languages: ["*"]
+    prompt_context: "Check for usage of weak hashing algorithms like MD5 or SHA1."
+
+  - id: SEC-003
+    description: "Cross-Site Scripting (XSS)"
+    severity: critical
+    category: security
+    languages: ["html", "javascript", "typescript"]
+    prompt_context: "Identify places where user input is rendered directly into HTML without sanitization."

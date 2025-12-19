@@ -1,6 +1,6 @@
 # Binary
-goreview
-goreview.exe
+/goreview
+/goreview.exe
 
 # Build directory
 build/

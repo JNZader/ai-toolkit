@@ -1,0 +1,21 @@
+rules:
+  - id: CQ-001
+    description: "Function too long"
+    severity: warning
+    category: complexity
+    languages: ["*"]
+    prompt_context: "Identify functions that are longer than 50 lines and suggest breaking them down."
+
+  - id: CQ-002
+    description: "Missing documentation"
+    severity: info
+    category: documentation
+    languages: ["go", "python", "typescript"]
+    prompt_context: "Check for public functions/classes missing docstrings or comments."
+
+  - id: CQ-003
+    description: "Hardcoded secrets"
+    severity: critical
+    category: security
+    languages: ["*"]
+    prompt_context: "Identify hardcoded API keys, passwords, or tokens in the code."
