@@ -131,10 +131,24 @@ func (p *OllamaProvider) Review(ctx context.Context, request *ReviewRequest) (*R
 	cleanResp = strings.TrimPrefix(cleanResp, "```")
 	cleanResp = strings.TrimSuffix(cleanResp, "```")
 	
+	// Intentar parsear como lista []Issue
 	if err := json.Unmarshal([]byte(cleanResp), &issues); err != nil {
-		// Si falla el parseo, devolvemos un error generico o intentamos recuperar texto
-		// Por ahora retornamos error, en el futuro podemos hacer fallback
-		return nil, fmt.Errorf("failed to parse LLM response as JSON issues: %w\nResponse was: %s", err, cleanResp)
+		// Si falla, intentar como objeto simple Issue
+		var singleIssue Issue
+		if errSingle := json.Unmarshal([]byte(cleanResp), &singleIssue); errSingle == nil {
+			issues = []Issue{singleIssue}
+		} else {
+			// Si falla, intentar como objeto wrapper { "issues": [...] }
+			var wrapper struct {
+				Issues []Issue `json:"issues"`
+			}
+			if errWrapper := json.Unmarshal([]byte(cleanResp), &wrapper); errWrapper == nil {
+				issues = wrapper.Issues
+			} else {
+				// Si todo falla, retornar error original con la respuesta para debug
+				return nil, fmt.Errorf("failed to parse LLM response as JSON: %w\nResponse was: %s", err, cleanResp)
+			}
+		}
 	}
 
 	return &ReviewResponse{
